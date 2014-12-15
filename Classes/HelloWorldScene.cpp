@@ -62,8 +62,6 @@ bool HelloWorld::init()
 
     // add the label as a child to this layer
     this->addChild(label, 1);
-
-
     //////////////////////////////////////////////////
     // load the Sprite Sheet
     auto spritecache = SpriteFrameCache::getInstance();
@@ -71,7 +69,8 @@ bool HelloWorld::init()
     // the .plist file can be generated with any of the tools mentioned below
     spritecache->addSpriteFramesWithFile("tgirl.plist");
     
-    auto mysprite = Sprite::createWithSpriteFrameName("Thumbelina01.png");
+    
+    this->mysprite = Sprite::createWithSpriteFrameName("Thumbelina01.png");
     // position the sprite on the center of the screen
     mysprite->setPosition(Vec2(visibleSize.width/2 + origin.x, visibleSize.height/2 + origin.y));
     
@@ -93,7 +92,7 @@ bool HelloWorld::init()
     mysprite->runAction(RepeatForever::create(animate));
     
     // add the sprite as a child to this layer
-    this->addChild(mysprite, 0);
+    addChild(this->mysprite, 0);
     ///////////////////////////////////////////
 //    // add "HelloWorld" splash screen"
 //    auto sprite = Sprite::create("HelloWorld.png");
@@ -107,6 +106,58 @@ bool HelloWorld::init()
     return true;
 }
 
+void HelloWorld::onEnter()
+{
+    Layer::onEnter();
+    
+    // Register Touch Event
+    auto dispatcher = Director::getInstance()->getEventDispatcher();
+    auto listener = EventListenerTouchOneByOne::create();
+    
+    listener->onTouchBegan = CC_CALLBACK_2(HelloWorld::onTouchBegan, this);
+    listener->onTouchMoved = CC_CALLBACK_2(HelloWorld::onTouchMoved, this);
+    listener->onTouchEnded = CC_CALLBACK_2(HelloWorld::onTouchEnded, this);
+    
+    dispatcher->addEventListenerWithSceneGraphPriority(listener, this);
+}
+
+void HelloWorld::onExit()
+{
+    // You don't need to unregister listeners here as new API
+    // removes all linked listeners automatically in CCNode's destructor
+    // which is the base class for all cocos2d DRAWING classes
+    
+    Layer::onExit();
+}
+
+void HelloWorld::update(float dt)
+{
+    
+}
+
+bool HelloWorld::onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event)
+{
+    Size visibleSize = Director::getInstance()->getVisibleSize();
+    if (touch->getLocationInView().x < visibleSize.width/2){
+        // Move a sprite 50 pixels to the right, and 0 pixels to the top over 2 seconds.
+        auto moveBy = MoveBy::create(2, Vec2(50, 0));
+        
+        this->mysprite->runAction(moveBy);
+    }
+        
+    cocos2d::log("You touched %f, %f", touch->getLocationInView().x, touch->getLocationInView().y);
+    return true;
+}
+
+void HelloWorld::onTouchMoved(cocos2d::Touch* touch, cocos2d::Event* event)
+{
+    
+}
+
+void HelloWorld::onTouchEnded(cocos2d::Touch* touch, cocos2d::Event* event)
+{
+    
+}
 
 void HelloWorld::menuCloseCallback(Ref* pSender)
 {
