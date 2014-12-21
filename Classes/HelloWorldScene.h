@@ -11,24 +11,30 @@ public:
 
     // Here's a difference. Method 'init' in cocos2d-x returns bool, instead of returning 'id' in cocos2d-iphone
     virtual bool init();  
-    void update(float dt);
+    
 
     // a selector callback
     void menuCloseCallback(cocos2d::Ref* pSender);
     
     // implement the "static create()" method manually
     CREATE_FUNC(HelloWorld);
-    
+
+protected:
     cocos2d::Sprite* mysprite;
+    cocos2d::Animate* animate;
+    cocos2d::Animate* animateLeft;
+    cocos2d::Animate* animateRight;
     
 private:
     virtual void onEnter();
     virtual void onExit();
     
+    void update(float delta) override;
     bool onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event);
     void onTouchMoved(cocos2d::Touch* touch, cocos2d::Event* event);
     void onTouchEnded(cocos2d::Touch* touch, cocos2d::Event* event);
-    
+    void setPhyWorld(cocos2d::PhysicsWorld* world){m_world = world;}
+    cocos2d::PhysicsWorld* m_world;
 };
 
 #endif // __HELLOWORLD_SCENE_H__

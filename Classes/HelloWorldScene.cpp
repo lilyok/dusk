@@ -5,11 +5,11 @@ USING_NS_CC;
 Scene* HelloWorld::createScene()
 {
     // 'scene' is an autorelease object
-    auto scene = Scene::create();
-    
+    auto scene = Scene::createWithPhysics();
+    scene->getPhysicsWorld()->setDebugDrawMask(PhysicsWorld::DEBUGDRAW_ALL);
     // 'layer' is an autorelease object
     auto layer = HelloWorld::create();
-
+    layer->setPhyWorld(scene->getPhysicsWorld());
     // add layer as a child to scene
     scene->addChild(layer);
 
@@ -73,11 +73,11 @@ bool HelloWorld::init()
     this->mysprite = Sprite::createWithSpriteFrameName("Thumbelina01.png");
     // position the sprite on the center of the screen
     mysprite->setPosition(Vec2(visibleSize.width/2 + origin.x, visibleSize.height/2 + origin.y));
-    
+    mysprite->setScale(0.5f);
     // now lets animate the sprite we moved
     
     Vector<SpriteFrame*> animFrames;
-    animFrames.reserve(12);
+    animFrames.reserve(4);
     animFrames.pushBack(spritecache->getSpriteFrameByName("Thumbelina01.png"));
     animFrames.pushBack(spritecache->getSpriteFrameByName("Thumbelina02.png"));
     animFrames.pushBack(spritecache->getSpriteFrameByName("Thumbelina03.png"));
@@ -86,23 +86,55 @@ bool HelloWorld::init()
     
     // create the animation out of the frames
     Animation* animation = Animation::createWithSpriteFrames(animFrames, 0.1f);
-    Animate* animate = Animate::create(animation);
+    animate = Animate::create(animation);
+    animate->retain();
+    // now lets animate the sprite we moved
+    
+    Vector<SpriteFrame*> animLeftFrames;
+    animLeftFrames.reserve(5);
+    animLeftFrames.pushBack(spritecache->getSpriteFrameByName("ThumbelinaLeft01.png"));
+    animLeftFrames.pushBack(spritecache->getSpriteFrameByName("ThumbelinaLeft02.png"));
+    animLeftFrames.pushBack(spritecache->getSpriteFrameByName("ThumbelinaLeft03.png"));
+    animLeftFrames.pushBack(spritecache->getSpriteFrameByName("ThumbelinaLeft02.png"));
+    animLeftFrames.pushBack(spritecache->getSpriteFrameByName("ThumbelinaLeft01.png"));
+  
+
+    // create the animation out of the frames
+    Animation* animationLeft = Animation::createWithSpriteFrames(animLeftFrames, 0.1f);
+    animateLeft = Animate::create(animationLeft);
+    animateLeft->retain();
+    
+    // now lets animate the sprite we moved
+    
+    Vector<SpriteFrame*> animRightFrames;
+    animRightFrames.reserve(5);
+    animRightFrames.pushBack(spritecache->getSpriteFrameByName("ThumbelinaRight01.png"));
+    animRightFrames.pushBack(spritecache->getSpriteFrameByName("ThumbelinaRight02.png"));
+    animRightFrames.pushBack(spritecache->getSpriteFrameByName("ThumbelinaRight03.png"));
+    animRightFrames.pushBack(spritecache->getSpriteFrameByName("ThumbelinaRight02.png"));
+    animRightFrames.pushBack(spritecache->getSpriteFrameByName("ThumbelinaRight01.png"));
+    
+    // create the animation out of the frames
+    Animation* animationRight = Animation::createWithSpriteFrames(animRightFrames, 0.1f);
+    animateRight = Animate::create(animationRight);
+    animateRight->retain();
+    
+    auto physicsBody = PhysicsBody::createCircle(mysprite->getContentSize().width/4);
+    physicsBody->setDynamic(true);
+    //set the body isn't affected by the physics world's gravitational force
+    physicsBody->setGravityEnable(false);
+    
+    
+    physicsBody->setLinearDamping(0.5f);
     
     // run it and repeat it forever
     mysprite->runAction(RepeatForever::create(animate));
-    
+
     // add the sprite as a child to this layer
-    addChild(this->mysprite, 0);
-    ///////////////////////////////////////////
-//    // add "HelloWorld" splash screen"
-//    auto sprite = Sprite::create("HelloWorld.png");
-//    
-//    // position the sprite on the center of the screen
-//    sprite->setPosition(Vec2(visibleSize.width/2 + origin.x, visibleSize.height/2 + origin.y));
-//
-//    // add the sprite as a child to this layer
-//    this->addChild(sprite, 0);
-    
+    addChild(this->mysprite);
+    mysprite->setPhysicsBody(physicsBody);
+
+    this->scheduleUpdate();
     return true;
 }
 
@@ -130,21 +162,32 @@ void HelloWorld::onExit()
     Layer::onExit();
 }
 
-void HelloWorld::update(float dt)
+void HelloWorld::update(float delta)
 {
-    
+    if (mysprite->getNumberOfRunningActions() <= 0){
+        mysprite->runAction(RepeatForever::create(animate));
+    }
 }
 
 bool HelloWorld::onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event)
 {
+    
+    if (mysprite->getNumberOfRunningActions() > 0){
+        mysprite->stopAllActions();
+    }
+
     Size visibleSize = Director::getInstance()->getVisibleSize();
     if (touch->getLocationInView().x < visibleSize.width/2){
         // Move a sprite 50 pixels to the right, and 0 pixels to the top over 2 seconds.
-        auto moveBy = MoveBy::create(2, Vec2(50, 0));
         
-        this->mysprite->runAction(moveBy);
+        mysprite->runAction(Repeat::create(animateLeft,2));
+        mysprite->getPhysicsBody()->setVelocity(Vec2(-100,0));
+
+    } else {
+        mysprite->runAction(Repeat::create(animateRight,2));
+        mysprite->getPhysicsBody()->setVelocity(Vec2(100,0));
     }
-        
+
     cocos2d::log("You touched %f, %f", touch->getLocationInView().x, touch->getLocationInView().y);
     return true;
 }
@@ -156,6 +199,7 @@ void HelloWorld::onTouchMoved(cocos2d::Touch* touch, cocos2d::Event* event)
 
 void HelloWorld::onTouchEnded(cocos2d::Touch* touch, cocos2d::Event* event)
 {
+
     
 }
 
