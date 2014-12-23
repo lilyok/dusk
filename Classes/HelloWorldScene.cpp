@@ -119,7 +119,8 @@ bool HelloWorld::init()
     animateRight = Animate::create(animationRight);
     animateRight->retain();
     
-    auto physicsBody = PhysicsBody::createCircle(mysprite->getContentSize().width/4);
+    auto physicsBody = PhysicsBody::createCircle(mysprite->getContentSize().width/4,
+                                                 PhysicsMaterial(0.1f, 1.0f, 0.0f));
     physicsBody->setDynamic(true);
     //set the body isn't affected by the physics world's gravitational force
     physicsBody->setGravityEnable(false);
@@ -131,11 +132,63 @@ bool HelloWorld::init()
     mysprite->runAction(RepeatForever::create(animate));
 
     // add the sprite as a child to this layer
-    addChild(this->mysprite);
+    addChild(this->mysprite, 1);
     mysprite->setPhysicsBody(physicsBody);
 
+    
+    auto map = TMXTiledMap::create("test.tmx");
+    Size s = map->getContentSize();
+    auto scale_map =visibleSize.width / s.width;
+    map->setScale(scale_map);
+    map->setPosition(Vec2(origin.x,
+                          origin.y + visibleSize.height - map->getContentSize().height));
+    
+    addChild(map, 0);
+    TMXObjectGroup *objects = map->getObjectGroup("border");
+    
+    if (objects != nullptr)
+    {
+        float x, y, w, h;
+        ValueVector objectsPoint = objects->getObjects();
+        for(auto objPointMap : objectsPoint)
+        {
+            ValueMap objPoint = objPointMap.asValueMap();
+            x = objPoint.at("x").asFloat();
+            y = objPoint.at("y").asFloat();
+            w = objPoint.at("width").asFloat();
+            h = objPoint.at("height").asFloat();
+            
+            Point _point = Point(scale_map*(x + w / 2.0f), scale_map*(y + h / 2.0f));
+            Size _size = Size(scale_map*w, scale_map*h);
+            
+            this->makePhysicsObjAt(_point, _size, false, 0, 0.0f, 0.0f, 0, -1);
+        }
+    }
+
+//    setScale(scale_map);
+    
     this->scheduleUpdate();
     return true;
+}
+
+void HelloWorld::makePhysicsObjAt(Point p, Size size, bool d, float r, float f, float dens, float rest, int boxId)
+{
+    auto sprite = Sprite::create();
+    auto body = PhysicsBody::createBox(size,
+                                       PhysicsMaterial(0.1f, 1.0f, 0.0f));
+    body->setTag(boxId);
+    body->getShape(0)->setRestitution(rest);
+    body->getShape(0)->setFriction(f);
+    body->getShape(0)->setDensity(dens);
+    body->setDynamic(d);
+  //  body->setVelocity(Vec2(0, 10));
+ //   body->setGravityEnable(true);
+ //   body->setContactTestBitmask(0xFFFFFFFF);
+    sprite->setPhysicsBody(body);
+    sprite->setPosition(p);
+    addChild(sprite, 1);
+    auto moveBy = MoveBy::create(1, Vec2(0, -100));
+    sprite->runAction(RepeatForever::create(moveBy));
 }
 
 void HelloWorld::onEnter()
@@ -167,6 +220,7 @@ void HelloWorld::update(float delta)
     if (mysprite->getNumberOfRunningActions() <= 0){
         mysprite->runAction(RepeatForever::create(animate));
     }
+    
 }
 
 bool HelloWorld::onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event)

@@ -34,6 +34,8 @@ private:
     void onTouchMoved(cocos2d::Touch* touch, cocos2d::Event* event);
     void onTouchEnded(cocos2d::Touch* touch, cocos2d::Event* event);
     void setPhyWorld(cocos2d::PhysicsWorld* world){m_world = world;}
+    void makePhysicsObjAt(cocos2d::Point p, cocos2d::Size size, bool d, float r, float f, float dens, float rest, int boxId);
+
     cocos2d::PhysicsWorld* m_world;
 };
 
