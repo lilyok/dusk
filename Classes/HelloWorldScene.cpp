@@ -1,6 +1,8 @@
 #include "HelloWorldScene.h"
 
 USING_NS_CC;
+#define HERO_SPRITE_TAG 10
+#define BRICK_SPRITE_TAG 20
 
 Scene* HelloWorld::createScene()
 {
@@ -42,11 +44,25 @@ bool HelloWorld::init()
     
 	closeItem->setPosition(Vec2(origin.x + visibleSize.width - closeItem->getContentSize().width/2 ,
                                 origin.y + closeItem->getContentSize().height/2));
-
+    
     // create menu, it's an autorelease object
     auto menu = Menu::create(closeItem, NULL);
     menu->setPosition(Vec2::ZERO);
     this->addChild(menu, 1);
+    
+    
+    this->restartItem = MenuItemImage::create(
+                                           "CloseNormal.png",
+                                           "CloseSelected.png",
+                                           CC_CALLBACK_1(HelloWorld::menuRestartCallback, this));
+    restartItem->setVisible(false);
+    restartItem->setPosition(Vec2(origin.x + visibleSize.width/2 - closeItem->getContentSize().width/2 ,
+                                origin.y + visibleSize.height/2 + closeItem->getContentSize().height/2));
+
+    // create menu, it's an autorelease object
+    auto menuRestart = Menu::create(restartItem, NULL);
+    menuRestart->setPosition(Vec2::ZERO);
+    this->addChild(menuRestart, 1);
 
     /////////////////////////////
     // 3. add your codes below...
@@ -72,6 +88,7 @@ bool HelloWorld::init()
     
     this->mysprite = Sprite::createWithSpriteFrameName("Thumbelina01.png");
     // position the sprite on the center of the screen
+    mysprite->setTag(HERO_SPRITE_TAG);
     mysprite->setPosition(Vec2(visibleSize.width/2 + origin.x, visibleSize.height/2 + origin.y));
     mysprite->setScale(0.5f);
     // now lets animate the sprite we moved
@@ -119,9 +136,27 @@ bool HelloWorld::init()
     animateRight = Animate::create(animationRight);
     animateRight->retain();
     
+    
+    Vector<SpriteFrame*> animSplashFrames;
+    animSplashFrames.reserve(7);
+    animSplashFrames.pushBack(spritecache->getSpriteFrameByName("splash01.png"));
+    animSplashFrames.pushBack(spritecache->getSpriteFrameByName("splash01a.png"));
+    animSplashFrames.pushBack(spritecache->getSpriteFrameByName("splash01b.png"));
+    animSplashFrames.pushBack(spritecache->getSpriteFrameByName("splash02.png"));
+    animSplashFrames.pushBack(spritecache->getSpriteFrameByName("splash02a.png"));
+    animSplashFrames.pushBack(spritecache->getSpriteFrameByName("splash02b.png"));
+    animSplashFrames.pushBack(spritecache->getSpriteFrameByName("splash03.png"));
+    
+    // create the animation out of the frames
+    Animation* animationSplash = Animation::createWithSpriteFrames(animSplashFrames, 0.1f);
+    animateSplash = Animate::create(animationSplash);
+    animateSplash->retain();
+    
+    
     auto physicsBody = PhysicsBody::createCircle(mysprite->getContentSize().width/4,
                                                  PhysicsMaterial(0.1f, 1.0f, 0.0f));
     physicsBody->setDynamic(true);
+    physicsBody->setContactTestBitmask(0xFFFFFFFF);
     //set the body isn't affected by the physics world's gravitational force
     physicsBody->setGravityEnable(false);
     
@@ -161,29 +196,32 @@ bool HelloWorld::init()
             Point _point = Point(scale_map*(x + w / 2.0f), scale_map*(y + h / 2.0f));
             Size _size = Size(scale_map*w, scale_map*h);
             
-            this->makePhysicsObjAt(_point, _size, false, 0, 0.0f, 0.0f, 0, -1);
+            this->makePhysicsObjAt(_point, _size, false, 0, 0.0f, 0.0f, 0);
         }
     }
 
 //    setScale(scale_map);
-    
+    auto contactListener = EventListenerPhysicsContact::create();
+    contactListener->onContactBegin = CC_CALLBACK_1(HelloWorld::onContactBegin,
+                                                    this);
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(contactListener,
+                                                             this);
     this->scheduleUpdate();
     return true;
 }
 
-void HelloWorld::makePhysicsObjAt(Point p, Size size, bool d, float r, float f, float dens, float rest, int boxId)
+
+void HelloWorld::makePhysicsObjAt(Point p, Size size, bool d, float r, float f, float dens, float rest)
 {
     auto sprite = Sprite::create();
     auto body = PhysicsBody::createBox(size,
                                        PhysicsMaterial(0.1f, 1.0f, 0.0f));
-    body->setTag(boxId);
+    sprite->setTag(BRICK_SPRITE_TAG);
     body->getShape(0)->setRestitution(rest);
     body->getShape(0)->setFriction(f);
     body->getShape(0)->setDensity(dens);
     body->setDynamic(d);
-  //  body->setVelocity(Vec2(0, 10));
- //   body->setGravityEnable(true);
- //   body->setContactTestBitmask(0xFFFFFFFF);
+    body->setContactTestBitmask(0xFFFFFFFF);
     sprite->setPhysicsBody(body);
     sprite->setPosition(p);
     addChild(sprite, 1);
@@ -218,9 +256,36 @@ void HelloWorld::onExit()
 void HelloWorld::update(float delta)
 {
     if (mysprite->getNumberOfRunningActions() <= 0){
-        mysprite->runAction(RepeatForever::create(animate));
+        if (isPaused)
+        {
+            this->pausedNodes = cocos2d::Director::getInstance()->getActionManager()->pauseAllRunningActions();
+            restartItem->setVisible(true);
+        }
+        else
+            mysprite->runAction(RepeatForever::create(animate));
     }
     
+}
+
+bool HelloWorld::onContactBegin(cocos2d::PhysicsContact& contact)
+{
+    auto nodeA = contact.getShapeA()->getBody()->getNode();
+    auto nodeB = contact.getShapeB()->getBody()->getNode();
+    if (nodeA && nodeB)
+    {
+        if (nodeA->getTag() == HERO_SPRITE_TAG or nodeB->getTag() == HERO_SPRITE_TAG)
+        {
+            if (mysprite->getNumberOfRunningActions() > 0){
+                mysprite->stopAllActions();
+            }
+            mysprite->runAction(Repeat::create(animateSplash, 1));
+            isPaused = true;
+            
+        }
+    }
+    
+    //bodies can collide
+    return true;
 }
 
 bool HelloWorld::onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event)
@@ -255,6 +320,15 @@ void HelloWorld::onTouchEnded(cocos2d::Touch* touch, cocos2d::Event* event)
 {
 
     
+}
+
+void HelloWorld::menuRestartCallback(Ref *pSender)
+{
+    isPaused = true;
+    auto newScene = HelloWorld::createScene();
+    cocos2d::Director::getInstance()->replaceScene(newScene);
+//    cocos2d::Director::getInstance()->getActionManager()->resumeTargets(this->pausedNodes);
+    restartItem->setVisible(false);
 }
 
 void HelloWorld::menuCloseCallback(Ref* pSender)
