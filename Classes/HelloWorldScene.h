@@ -36,7 +36,7 @@ private:
     void onTouchMoved(cocos2d::Touch* touch, cocos2d::Event* event);
     void onTouchEnded(cocos2d::Touch* touch, cocos2d::Event* event);
     void setPhyWorld(cocos2d::PhysicsWorld* world){m_world = world;}
-    void makePhysicsObjAt(cocos2d::Point p, cocos2d::Size size, bool d, float r, float f, float dens, float rest);
+    void makePhysicsObjAt(cocos2d::Point p, cocos2d::Size size, float r, float f, float dens, float rest);
     bool onContactBegin(cocos2d::PhysicsContact& contact);
     bool isPaused = false;
     

@@ -90,11 +90,15 @@ bool HelloWorld::init()
     // position the sprite on the center of the screen
     mysprite->setTag(HERO_SPRITE_TAG);
     mysprite->setPosition(Vec2(visibleSize.width/2 + origin.x, visibleSize.height/2 + origin.y));
-    mysprite->setScale(0.5f);
+    auto myScale = visibleSize.width/4/mysprite->getContentSize().width;
+    mysprite->setScale(myScale);
     // now lets animate the sprite we moved
     
     Vector<SpriteFrame*> animFrames;
-    animFrames.reserve(4);
+    animFrames.reserve(2);
+//    animFrames.pushBack(SpriteFrame::create("negar_cat.png", Rect(0,0,visibleSize.width,visibleSize.height)));
+//    animFrames.pushBack(SpriteFrame::create("negar_cat_2.png", Rect(0,0,visibleSize.width,visibleSize.height)));
+    
     animFrames.pushBack(spritecache->getSpriteFrameByName("Thumbelina01.png"));
     animFrames.pushBack(spritecache->getSpriteFrameByName("Thumbelina02.png"));
     animFrames.pushBack(spritecache->getSpriteFrameByName("Thumbelina03.png"));
@@ -153,7 +157,7 @@ bool HelloWorld::init()
     animateSplash->retain();
     
     
-    auto physicsBody = PhysicsBody::createCircle(mysprite->getContentSize().width/4,
+    auto physicsBody = PhysicsBody::createCircle(mysprite->getContentSize().width*myScale/2,
                                                  PhysicsMaterial(0.1f, 1.0f, 0.0f));
     physicsBody->setDynamic(true);
     physicsBody->setContactTestBitmask(0xFFFFFFFF);
@@ -171,15 +175,26 @@ bool HelloWorld::init()
     mysprite->setPhysicsBody(physicsBody);
 
     
-    auto map = TMXTiledMap::create("test.tmx");
+    //auto map = TMXTiledMap::create("test.tmx");
+    auto map = TMXTiledMap::create("holeTile.tmx");
     Size s = map->getContentSize();
     auto scale_map =visibleSize.width / s.width;
     map->setScale(scale_map);
-    map->setPosition(Vec2(origin.x,
-                          origin.y + visibleSize.height - map->getContentSize().height));
+    auto yZero = origin.y+ visibleSize.height - map->getContentSize().height;
+    map->setPosition(Vec2(origin.x, yZero));
     
     addChild(map, 0);
-    TMXObjectGroup *objects = map->getObjectGroup("border");
+  
+    auto moveBy = MoveBy::create(1, Vec2(0, -20/scale_map));
+    
+    auto backLayer = map->getLayer("back");
+    backLayer->runAction(RepeatForever::create(moveBy));
+ //   backLayer->setScale(scale_map);
+    auto moveBy1 = MoveBy::create(1, Vec2(0, -50/scale_map));
+    auto collisionsLayer = map->getLayer("collisionslayer");
+    collisionsLayer->runAction(RepeatForever::create(moveBy1));
+//
+    TMXObjectGroup *objects = map->getObjectGroup("collisions");
     
     if (objects != nullptr)
     {
@@ -193,14 +208,13 @@ bool HelloWorld::init()
             w = objPoint.at("width").asFloat();
             h = objPoint.at("height").asFloat();
             
-            Point _point = Point(scale_map*(x + w / 2.0f), scale_map*(y + h / 2.0f));
+            Point _point = Point(origin.x+scale_map*(x + w / 2.0f), yZero+scale_map*(y+h/2.0f));
             Size _size = Size(scale_map*w, scale_map*h);
             
-            this->makePhysicsObjAt(_point, _size, false, 0, 0.0f, 0.0f, 0);
+            this->makePhysicsObjAt(_point, _size, 0, 0.0f, 0.0f, 0);
         }
     }
 
-//    setScale(scale_map);
     auto contactListener = EventListenerPhysicsContact::create();
     contactListener->onContactBegin = CC_CALLBACK_1(HelloWorld::onContactBegin,
                                                     this);
@@ -211,7 +225,7 @@ bool HelloWorld::init()
 }
 
 
-void HelloWorld::makePhysicsObjAt(Point p, Size size, bool d, float r, float f, float dens, float rest)
+void HelloWorld::makePhysicsObjAt(Point p, Size size, float r, float f, float dens, float rest)
 {
     auto sprite = Sprite::create();
     auto body = PhysicsBody::createBox(size,
@@ -220,13 +234,13 @@ void HelloWorld::makePhysicsObjAt(Point p, Size size, bool d, float r, float f, 
     body->getShape(0)->setRestitution(rest);
     body->getShape(0)->setFriction(f);
     body->getShape(0)->setDensity(dens);
-    body->setDynamic(d);
+    body->setDynamic(false);
     body->setContactTestBitmask(0xFFFFFFFF);
     sprite->setPhysicsBody(body);
     sprite->setPosition(p);
     addChild(sprite, 1);
-    auto moveBy = MoveBy::create(1, Vec2(0, -100));
-    sprite->runAction(RepeatForever::create(moveBy));
+    auto moveBy2 = MoveBy::create(1, Vec2(0, -50));
+    sprite->runAction(RepeatForever::create(moveBy2));
 }
 
 void HelloWorld::onEnter()
@@ -260,6 +274,9 @@ void HelloWorld::update(float delta)
         {
             this->pausedNodes = cocos2d::Director::getInstance()->getActionManager()->pauseAllRunningActions();
             restartItem->setVisible(true);
+            mysprite->getPhysicsBody()->setGravityEnable(true);
+
+//            mysprite->getPhysicsBody()->setDynamic(false);
         }
         else
             mysprite->runAction(RepeatForever::create(animate));
@@ -269,45 +286,47 @@ void HelloWorld::update(float delta)
 
 bool HelloWorld::onContactBegin(cocos2d::PhysicsContact& contact)
 {
-    auto nodeA = contact.getShapeA()->getBody()->getNode();
-    auto nodeB = contact.getShapeB()->getBody()->getNode();
-    if (nodeA && nodeB)
-    {
-        if (nodeA->getTag() == HERO_SPRITE_TAG or nodeB->getTag() == HERO_SPRITE_TAG)
+    if (!isPaused){
+        auto nodeA = contact.getShapeA()->getBody()->getNode();
+        auto nodeB = contact.getShapeB()->getBody()->getNode();
+        if (nodeA && nodeB)
         {
-            if (mysprite->getNumberOfRunningActions() > 0){
-                mysprite->stopAllActions();
+            if (nodeA->getTag() == HERO_SPRITE_TAG or nodeB->getTag() == HERO_SPRITE_TAG)
+            {
+                if (mysprite->getNumberOfRunningActions() > 0){
+                    mysprite->stopAllActions();
+                }
+                mysprite->runAction(Repeat::create(animateSplash, 1));
+                isPaused = true;
+                
             }
-            mysprite->runAction(Repeat::create(animateSplash, 1));
-            isPaused = true;
-            
         }
     }
-    
     //bodies can collide
     return true;
 }
 
 bool HelloWorld::onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event)
 {
-    
-    if (mysprite->getNumberOfRunningActions() > 0){
-        mysprite->stopAllActions();
-    }
-
-    Size visibleSize = Director::getInstance()->getVisibleSize();
-    if (touch->getLocationInView().x < visibleSize.width/2){
-        // Move a sprite 50 pixels to the right, and 0 pixels to the top over 2 seconds.
+    if (!isPaused){
+        if (mysprite->getNumberOfRunningActions() > 0){
+            mysprite->stopAllActions();
+        }
         
-        mysprite->runAction(Repeat::create(animateLeft,2));
-        mysprite->getPhysicsBody()->setVelocity(Vec2(-100,0));
-
-    } else {
-        mysprite->runAction(Repeat::create(animateRight,2));
-        mysprite->getPhysicsBody()->setVelocity(Vec2(100,0));
+        Size visibleSize = Director::getInstance()->getVisibleSize();
+        if (touch->getLocationInView().x < visibleSize.width/2){
+            // Move a sprite 50 pixels to the right, and 0 pixels to the top over 2 seconds.
+            
+            mysprite->runAction(Repeat::create(animateLeft,2));
+            mysprite->getPhysicsBody()->setVelocity(Vec2(-100,0));
+            
+        } else {
+            mysprite->runAction(Repeat::create(animateRight,2));
+            mysprite->getPhysicsBody()->setVelocity(Vec2(100,0));
+        }
     }
-
     cocos2d::log("You touched %f, %f", touch->getLocationInView().x, touch->getLocationInView().y);
+        
     return true;
 }
 
@@ -329,6 +348,9 @@ void HelloWorld::menuRestartCallback(Ref *pSender)
     cocos2d::Director::getInstance()->replaceScene(newScene);
 //    cocos2d::Director::getInstance()->getActionManager()->resumeTargets(this->pausedNodes);
     restartItem->setVisible(false);
+    //mysprite->getPhysicsBody()->setGravityEnable(false);
+    //mysprite->getPhysicsBody()->setDynamic(true);
+
 }
 
 void HelloWorld::menuCloseCallback(Ref* pSender)
