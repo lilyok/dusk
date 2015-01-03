@@ -1,9 +1,11 @@
 #include "HelloWorldScene.h"
 
 USING_NS_CC;
-#define HERO_SPRITE_TAG 10
-#define BRICK_SPRITE_TAG 20
-
+#define HERO_SPRITE_TAG 5
+#define BRICK_SPRITE_TAG 10
+#define BALL_SPRITE_TAG 20
+#define BRICK 1
+#define BALL 2
 Scene* HelloWorld::createScene()
 {
     // 'scene' is an autorelease object
@@ -83,14 +85,14 @@ bool HelloWorld::init()
     auto spritecache = SpriteFrameCache::getInstance();
     
     // the .plist file can be generated with any of the tools mentioned below
-    spritecache->addSpriteFramesWithFile("tgirl.plist");
+    spritecache->addSpriteFramesWithFile("sprites.plist");
     
     
     this->mysprite = Sprite::createWithSpriteFrameName("Thumbelina01.png");
     // position the sprite on the center of the screen
     mysprite->setTag(HERO_SPRITE_TAG);
     mysprite->setPosition(Vec2(visibleSize.width/2 + origin.x, visibleSize.height/2 + origin.y));
-    auto myScale = visibleSize.width/4/mysprite->getContentSize().width;
+    auto myScale = visibleSize.width/5/mysprite->getContentSize().width;
     mysprite->setScale(myScale);
     // now lets animate the sprite we moved
     
@@ -106,7 +108,7 @@ bool HelloWorld::init()
 
     
     // create the animation out of the frames
-    Animation* animation = Animation::createWithSpriteFrames(animFrames, 0.1f);
+    Animation* animation = Animation::createWithSpriteFrames(animFrames, 0.2f);
     animate = Animate::create(animation);
     animate->retain();
     // now lets animate the sprite we moved
@@ -142,7 +144,7 @@ bool HelloWorld::init()
     
     
     Vector<SpriteFrame*> animSplashFrames;
-    animSplashFrames.reserve(7);
+    animSplashFrames.reserve(8);
     animSplashFrames.pushBack(spritecache->getSpriteFrameByName("splash01.png"));
     animSplashFrames.pushBack(spritecache->getSpriteFrameByName("splash01a.png"));
     animSplashFrames.pushBack(spritecache->getSpriteFrameByName("splash01b.png"));
@@ -150,6 +152,7 @@ bool HelloWorld::init()
     animSplashFrames.pushBack(spritecache->getSpriteFrameByName("splash02a.png"));
     animSplashFrames.pushBack(spritecache->getSpriteFrameByName("splash02b.png"));
     animSplashFrames.pushBack(spritecache->getSpriteFrameByName("splash03.png"));
+    animSplashFrames.pushBack(spritecache->getSpriteFrameByName("splash03a.png"));
     
     // create the animation out of the frames
     Animation* animationSplash = Animation::createWithSpriteFrames(animSplashFrames, 0.1f);
@@ -181,6 +184,9 @@ bool HelloWorld::init()
     auto scale_map =visibleSize.width / s.width;
     map->setScale(scale_map);
     auto yZero = origin.y+ visibleSize.height - map->getContentSize().height;
+    int n = ceil((s.height + visibleSize.height/2.0 - yZero*scale_map)/50.0);
+    //int n_back = ceil((s.height + visibleSize.height/2.0 - yZero*scale_map)/20.0);
+
     map->setPosition(Vec2(origin.x, yZero));
     
     addChild(map, 0);
@@ -188,14 +194,29 @@ bool HelloWorld::init()
     auto moveBy = MoveBy::create(1, Vec2(0, -20/scale_map));
     
     auto backLayer = map->getLayer("back");
-    backLayer->runAction(RepeatForever::create(moveBy));
- //   backLayer->setScale(scale_map);
+    backLayer->runAction(Repeat::create(moveBy, n)); //*50/20
     auto moveBy1 = MoveBy::create(1, Vec2(0, -50/scale_map));
+    cocos2d::log("height %f, yZero %f, n %i", s.height, yZero, n);
     auto collisionsLayer = map->getLayer("collisionslayer");
-    collisionsLayer->runAction(RepeatForever::create(moveBy1));
-//
-    TMXObjectGroup *objects = map->getObjectGroup("collisions");
+    collisionsLayer->runAction(Repeat::create(moveBy1, n));
+
+    TMXObjectGroup *walls = map->getObjectGroup("collisions");
+    makeObject(walls, origin, scale_map, yZero, BRICK, 0.0f, false, -50, n);
     
+    TMXObjectGroup *fallings = map->getObjectGroup("fallings");
+    makeObject(fallings, origin, scale_map, yZero, BALL, 0.5f, true);
+
+//    auto contactListener = EventListenerPhysicsContact::create();
+//    contactListener->onContactBegin = CC_CALLBACK_1(HelloWorld::onContactBegin,
+//                                                    this);
+//    _eventDispatcher->addEventListenerWithSceneGraphPriority(contactListener,
+//                                                             this);
+    this->scheduleUpdate();
+    return true;
+}
+
+void HelloWorld::makeObject(TMXObjectGroup *objects, Point origin, float scale_map, float yZero, int form, float rest, bool is_dynamic, int v, int n)
+{
     if (objects != nullptr)
     {
         float x, y, w, h;
@@ -210,37 +231,66 @@ bool HelloWorld::init()
             
             Point _point = Point(origin.x+scale_map*(x + w / 2.0f), yZero+scale_map*(y+h/2.0f));
             Size _size = Size(scale_map*w, scale_map*h);
-            
-            this->makePhysicsObjAt(_point, _size, 0, 0.0f, 0.0f, 0);
+            if (is_dynamic)
+                this->makePhysicsObjAt(_point, _size, 0, 0.0f, 0.0f, rest, form);
+            else
+                this->makePhysicsObjAt(_point, _size, form, v, n);
         }
     }
-
-    auto contactListener = EventListenerPhysicsContact::create();
-    contactListener->onContactBegin = CC_CALLBACK_1(HelloWorld::onContactBegin,
-                                                    this);
-    _eventDispatcher->addEventListenerWithSceneGraphPriority(contactListener,
-                                                             this);
-    this->scheduleUpdate();
-    return true;
+    
 }
 
 
-void HelloWorld::makePhysicsObjAt(Point p, Size size, float r, float f, float dens, float rest)
+void HelloWorld::makePhysicsObjAt(Point p, Size size, int form, int v, int n)
 {
     auto sprite = Sprite::create();
-    auto body = PhysicsBody::createBox(size,
-                                       PhysicsMaterial(0.1f, 1.0f, 0.0f));
-    sprite->setTag(BRICK_SPRITE_TAG);
-    body->getShape(0)->setRestitution(rest);
-    body->getShape(0)->setFriction(f);
-    body->getShape(0)->setDensity(dens);
+    PhysicsBody* body;
+    if (form == BRICK){
+        body = PhysicsBody::createBox(size,
+                                      PhysicsMaterial(0.1f, 1.0f, 0.0f));
+        sprite->setTag(BRICK_SPRITE_TAG);
+    } else if (form == BALL){
+        body = PhysicsBody::createCircle(MAX(size.width, size.height)/2.0,
+                                         PhysicsMaterial(0.1f, 1.0f, 0.0f));
+        sprite->setTag(BALL_SPRITE_TAG);
+    }
+
     body->setDynamic(false);
     body->setContactTestBitmask(0xFFFFFFFF);
     sprite->setPhysicsBody(body);
     sprite->setPosition(p);
     addChild(sprite, 1);
-    auto moveBy2 = MoveBy::create(1, Vec2(0, -50));
-    sprite->runAction(RepeatForever::create(moveBy2));
+    
+    
+    auto moveBy2 = MoveBy::create(1, Vec2(0, v));
+    if (n < 0)
+        sprite->runAction(RepeatForever::create(moveBy2));
+    else
+        sprite->runAction(Repeat::create(moveBy2, n));
+}
+
+void HelloWorld::makePhysicsObjAt(Point p, Size size, float r, float f, float dens, float rest, int form)
+{
+    auto sprite = Sprite::create();
+    PhysicsBody* body;
+    if (form == BRICK){
+        body = PhysicsBody::createBox(size,
+                                       PhysicsMaterial(0.1f, 1.0f, 0.0f));
+        sprite->setTag(BRICK_SPRITE_TAG);
+    } else if (form == BALL){
+        body = PhysicsBody::createCircle(MAX(size.width, size.height)/2.0,
+                                      PhysicsMaterial(0.1f, 1.0f, 0.0f));
+        sprite->setTag(BALL_SPRITE_TAG);
+    }
+    body->getShape(0)->setRestitution(rest);
+    body->getShape(0)->setFriction(f);
+    body->getShape(0)->setDensity(dens);
+    body->setDynamic(true);
+    body->setGravityEnable(true);
+    body->setContactTestBitmask(0xFFFFFFFF);
+    sprite->setPhysicsBody(body);
+    sprite->setPosition(p);
+    addChild(sprite, 1);
 }
 
 void HelloWorld::onEnter()
@@ -313,8 +363,9 @@ bool HelloWorld::onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event)
             mysprite->stopAllActions();
         }
         
-        Size visibleSize = Director::getInstance()->getVisibleSize();
-        if (touch->getLocationInView().x < visibleSize.width/2){
+  //      Size visibleSize = Director::getInstance()->getVisibleSize();
+        
+        if (touch->getLocationInView().x < mysprite->getPositionX()){
             // Move a sprite 50 pixels to the right, and 0 pixels to the top over 2 seconds.
             
             mysprite->runAction(Repeat::create(animateLeft,2));
