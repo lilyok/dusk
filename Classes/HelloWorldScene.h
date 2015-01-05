@@ -16,6 +16,7 @@ public:
     // a selector callback
     void menuCloseCallback(cocos2d::Ref* pSender);
     void menuRestartCallback(cocos2d::Ref* pSender);
+    void menuNewLeveltCallback(cocos2d::Ref *pSender);
     // implement the "static create()" method manually
     CREATE_FUNC(HelloWorld);
 
@@ -36,13 +37,19 @@ private:
     void onTouchMoved(cocos2d::Touch* touch, cocos2d::Event* event);
     void onTouchEnded(cocos2d::Touch* touch, cocos2d::Event* event);
     void setPhyWorld(cocos2d::PhysicsWorld* world){m_world = world;}
-    void makeObject(cocos2d::TMXObjectGroup *objects, cocos2d::Point origin, float scale_map, float yZero, int form, float rest, bool is_dynamic, int v = 0, int n = -1);
-    void makePhysicsObjAt(cocos2d::Point p, cocos2d::Size size, float r, float f, float dens, float rest, int form);
-    void makePhysicsObjAt(cocos2d::Point p, cocos2d::Size size, int form, int v = 0, int n = -1);
+    void makeObject(int tag, cocos2d::TMXObjectGroup *objects, cocos2d::SpriteFrameCache* spritecache, std::string name, int spritecount, int animsize, cocos2d::Point origin, float scale_map, float yZero, int form, float rest, int mask = 0xFFFFFFFF);
+    void makeObject(int tag, cocos2d::TMXObjectGroup *objects, cocos2d::Point origin, float scale_map, float yZero, int form, int v = 0, int n = -1, int mask = 0xFFFFFFFF);
+    void makePhysicsObjAt(int tag, cocos2d::Point p, cocos2d::Size size, float r, float f, float dens, float rest, int form, cocos2d::Animate* anim, std::string name, int mask = 0xFFFFFFFF);
+    void makePhysicsObjAt(int tag, cocos2d::Point p, cocos2d::Size size, int form, int v = 0, int n = -1, int mask = 0xFFFFFFFF);
     bool onContactBegin(cocos2d::PhysicsContact& contact);
-    bool isPaused = false;
+    bool isRestart = false;
+    bool isNewLevel = false;
     
-    cocos2d::MenuItem* restartItem;
+    //cocos2d::TMXTiledMap* map;
+    cocos2d::MenuItemImage* restartItem;
+    cocos2d::MenuItemImage* newlevelItem;
+    
+    
     cocos2d::PhysicsWorld* m_world;
     cocos2d::Vector<Node*> pausedNodes;
 };

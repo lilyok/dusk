@@ -2,15 +2,20 @@
 
 USING_NS_CC;
 #define HERO_SPRITE_TAG 5
-#define BRICK_SPRITE_TAG 10
-#define BALL_SPRITE_TAG 20
+#define COLLISION_TAG 10
+#define FALLING_TAG 20
+#define LIMITER_TAG 30
+#define NEWLEVEL_TAG 40
 #define BRICK 1
 #define BALL 2
+#define COLLISION_V 100.0
+#define BACKGROUND_V 40.0
+
 Scene* HelloWorld::createScene()
 {
     // 'scene' is an autorelease object
     auto scene = Scene::createWithPhysics();
-    scene->getPhysicsWorld()->setDebugDrawMask(PhysicsWorld::DEBUGDRAW_ALL);
+    //scene->getPhysicsWorld()->setDebugDrawMask(PhysicsWorld::DEBUGDRAW_ALL);
     // 'layer' is an autorelease object
     auto layer = HelloWorld::create();
     layer->setPhyWorld(scene->getPhysicsWorld());
@@ -51,7 +56,9 @@ bool HelloWorld::init()
     auto menu = Menu::create(closeItem, NULL);
     menu->setPosition(Vec2::ZERO);
     this->addChild(menu, 1);
-    
+    closeItem->setGlobalZOrder(3);
+    closeItem->getNormalImage()->setGlobalZOrder(3);
+    closeItem->getSelectedImage()->setGlobalZOrder(3);
     
     this->restartItem = MenuItemImage::create(
                                            "CloseNormal.png",
@@ -65,7 +72,27 @@ bool HelloWorld::init()
     auto menuRestart = Menu::create(restartItem, NULL);
     menuRestart->setPosition(Vec2::ZERO);
     this->addChild(menuRestart, 1);
-
+    restartItem->setGlobalZOrder(3);
+    restartItem->getNormalImage()->setGlobalZOrder(3);
+    restartItem->getSelectedImage()->setGlobalZOrder(3);
+    ///////////////////////////////////////////////////////////////////////////
+    this->newlevelItem = MenuItemImage::create(
+                                              "CloseNormal.png",
+                                              "CloseSelected.png",
+                                              CC_CALLBACK_1(HelloWorld::menuNewLeveltCallback, this));
+    newlevelItem->setVisible(false);
+    newlevelItem->setPosition(Vec2(origin.x + visibleSize.width/2 - closeItem->getContentSize().width/2 ,
+                                  origin.y + visibleSize.height/2 + closeItem->getContentSize().height/2));
+    
+   
+    // create menu, it's an autorelease object
+    auto menuNewLevel = Menu::create(newlevelItem, NULL);
+    menuNewLevel->setPosition(Vec2::ZERO);
+    this->addChild(menuNewLevel, 1);
+    newlevelItem->setGlobalZOrder(3);
+    newlevelItem->getNormalImage()->setGlobalZOrder(3);
+    newlevelItem->getSelectedImage()->setGlobalZOrder(3);
+    
     /////////////////////////////
     // 3. add your codes below...
 
@@ -81,11 +108,16 @@ bool HelloWorld::init()
     // add the label as a child to this layer
     this->addChild(label, 1);
     //////////////////////////////////////////////////
+    auto spidercache = SpriteFrameCache::getInstance();
+    spidercache->addSpriteFramesWithFile("spider.plist");
+    auto spidersCount = 3;
+    auto spidersAnimSize = 2;
+    
     // load the Sprite Sheet
     auto spritecache = SpriteFrameCache::getInstance();
     
     // the .plist file can be generated with any of the tools mentioned below
-    spritecache->addSpriteFramesWithFile("sprites.plist");
+    spritecache->addSpriteFramesWithFile("tgirl.plist");
     
     
     this->mysprite = Sprite::createWithSpriteFrameName("Thumbelina01.png");
@@ -97,10 +129,7 @@ bool HelloWorld::init()
     // now lets animate the sprite we moved
     
     Vector<SpriteFrame*> animFrames;
-    animFrames.reserve(2);
-//    animFrames.pushBack(SpriteFrame::create("negar_cat.png", Rect(0,0,visibleSize.width,visibleSize.height)));
-//    animFrames.pushBack(SpriteFrame::create("negar_cat_2.png", Rect(0,0,visibleSize.width,visibleSize.height)));
-    
+    animFrames.reserve(4);
     animFrames.pushBack(spritecache->getSpriteFrameByName("Thumbelina01.png"));
     animFrames.pushBack(spritecache->getSpriteFrameByName("Thumbelina02.png"));
     animFrames.pushBack(spritecache->getSpriteFrameByName("Thumbelina03.png"));
@@ -184,38 +213,98 @@ bool HelloWorld::init()
     auto scale_map =visibleSize.width / s.width;
     map->setScale(scale_map);
     auto yZero = origin.y+ visibleSize.height - map->getContentSize().height;
-    int n = ceil((s.height + visibleSize.height/2.0 - yZero*scale_map)/50.0);
-    //int n_back = ceil((s.height + visibleSize.height/2.0 - yZero*scale_map)/20.0);
-
+    int n = ceil((s.height + visibleSize.height/2.0 - yZero*scale_map)/COLLISION_V);
+    int n1 = ceil((s.height + visibleSize.height/2.0 - yZero*scale_map)/150.0);
+    cocos2d::log("scale_map = %f, sheight %f, vheight = %f, yZero %f, n %i, n1 %i", scale_map, s.height, visibleSize.height, yZero, n, n1);
     map->setPosition(Vec2(origin.x, yZero));
-    
+   //cocos2d: scale_map = 2.500000, sheight 1280.000000, vheight = 1136.000000, yZero -144.000000, n 45, n1 15
     addChild(map, 0);
   
-    auto moveBy = MoveBy::create(1, Vec2(0, -20/scale_map));
+    auto moveBy = MoveBy::create(1, Vec2(0, -BACKGROUND_V/scale_map));
     
     auto backLayer = map->getLayer("back");
-    backLayer->runAction(Repeat::create(moveBy, n)); //*50/20
-    auto moveBy1 = MoveBy::create(1, Vec2(0, -50/scale_map));
+    backLayer->runAction(Repeat::create(moveBy, n));
+    auto collisionMoveBy = MoveBy::create(1, Vec2(0, -COLLISION_V/scale_map));
     cocos2d::log("height %f, yZero %f, n %i", s.height, yZero, n);
     auto collisionsLayer = map->getLayer("collisionslayer");
-    collisionsLayer->runAction(Repeat::create(moveBy1, n));
-
+    collisionsLayer->runAction(Repeat::create(collisionMoveBy, n));
+    
+    auto crowdholeMoveBy = MoveBy::create(1, Vec2(0, -COLLISION_V/scale_map));
+    auto crowdhole = map->getLayer("crowhole");
+    crowdhole->runAction(Repeat::create(crowdholeMoveBy, n));
+    auto crowdLayerMoveBy = MoveBy::create(1, Vec2(0, -COLLISION_V/scale_map));
+    auto crowdLayer = map->getLayer("crowdlayer");
+    crowdLayer->runAction(Repeat::create(crowdLayerMoveBy, n));
+    crowdLayer->setGlobalZOrder(2);// setPositionZ(2);
+  //  map->reorderChild(crowdLayer, 1);
+    
     TMXObjectGroup *walls = map->getObjectGroup("collisions");
-    makeObject(walls, origin, scale_map, yZero, BRICK, 0.0f, false, -50, n);
+    makeObject(COLLISION_TAG, walls, origin, scale_map, yZero, BRICK, -COLLISION_V, n);
     
     TMXObjectGroup *fallings = map->getObjectGroup("fallings");
-    makeObject(fallings, origin, scale_map, yZero, BALL, 0.5f, true);
+    makeObject(FALLING_TAG, fallings, spidercache, "spider", spidersCount, spidersAnimSize, origin, scale_map, yZero, BALL, 0.5f);
 
-//    auto contactListener = EventListenerPhysicsContact::create();
-//    contactListener->onContactBegin = CC_CALLBACK_1(HelloWorld::onContactBegin,
-//                                                    this);
-//    _eventDispatcher->addEventListenerWithSceneGraphPriority(contactListener,
-//                                                             this);
+    TMXObjectGroup *limiter = map->getObjectGroup("limiter");
+    makeObject(LIMITER_TAG, limiter , origin, scale_map, yZero, BRICK, -COLLISION_V, n);
+    
+    TMXObjectGroup *newlevel = map->getObjectGroup("newlevel");
+    makeObject(NEWLEVEL_TAG, newlevel, origin, scale_map, yZero, BRICK, -COLLISION_V, n);
+    
+    auto contactListener = EventListenerPhysicsContact::create();
+    contactListener->onContactBegin = CC_CALLBACK_1(HelloWorld::onContactBegin,
+                                                    this);
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(contactListener,
+                                                             this);
     this->scheduleUpdate();
     return true;
 }
 
-void HelloWorld::makeObject(TMXObjectGroup *objects, Point origin, float scale_map, float yZero, int form, float rest, bool is_dynamic, int v, int n)
+void HelloWorld::makeObject(int tag, TMXObjectGroup *objects, SpriteFrameCache* spritecache, std::string name, int spritecount, int animsize, Point origin, float scale_map, float yZero, int form, float rest, int mask)
+{
+    if (objects != nullptr)
+    {
+        Vector<Animate*> anim;
+        
+        Vector<SpriteFrame*> spiderFrames;
+        for (int i = 0; i < spritecount; i++)
+        {
+            Vector<SpriteFrame*> spiderFrames;
+            spiderFrames.reserve(animsize);
+            for (int j = 1; j <= animsize; j++) {
+                char* res = new char[50];
+                std::sprintf(res, "%s%02i.png", name.c_str(), i*animsize+j);
+                spiderFrames.pushBack(spritecache->getSpriteFrameByName(res));
+            }
+            Animate *animate = Animate::create(Animation::createWithSpriteFrames(spiderFrames, 0.5f));
+         //   animate->retain();
+            anim.pushBack(animate);
+        }
+
+        float x, y, w, h;
+        ValueVector objectsPoint = objects->getObjects();
+        int i = 0;
+        for(auto objPointMap : objectsPoint)
+        {
+            ValueMap objPoint = objPointMap.asValueMap();
+            x = objPoint.at("x").asFloat();
+            y = objPoint.at("y").asFloat();
+            w = objPoint.at("width").asFloat();
+            h = objPoint.at("height").asFloat();
+            
+            Point _point = Point(origin.x+scale_map*(x + w / 2.0f), yZero+scale_map*(y+h/2.0f));
+            Size _size = Size(scale_map*w, scale_map*h);
+            char* res = new char[50];
+            std::sprintf(res, "%s%02i.png", name.c_str(), (i%spritecount)*animsize + 1);
+            this->makePhysicsObjAt(tag, _point, _size, 0, 0.5f, 0.5f, rest, form, anim.at(i%spritecount), res, mask);
+            i++;
+        }
+    }
+    
+}
+
+
+
+void HelloWorld::makeObject(int tag, TMXObjectGroup *objects, Point origin, float scale_map, float yZero, int form, int v, int n, int mask)
 {
     if (objects != nullptr)
     {
@@ -231,32 +320,26 @@ void HelloWorld::makeObject(TMXObjectGroup *objects, Point origin, float scale_m
             
             Point _point = Point(origin.x+scale_map*(x + w / 2.0f), yZero+scale_map*(y+h/2.0f));
             Size _size = Size(scale_map*w, scale_map*h);
-            if (is_dynamic)
-                this->makePhysicsObjAt(_point, _size, 0, 0.0f, 0.0f, rest, form);
-            else
-                this->makePhysicsObjAt(_point, _size, form, v, n);
+            this->makePhysicsObjAt(tag, _point, _size, form, v, n, mask);
         }
     }
     
 }
 
-
-void HelloWorld::makePhysicsObjAt(Point p, Size size, int form, int v, int n)
+void HelloWorld::makePhysicsObjAt(int tag, Point p, Size size, int form, int v, int n, int mask)
 {
     auto sprite = Sprite::create();
     PhysicsBody* body;
     if (form == BRICK){
         body = PhysicsBody::createBox(size,
                                       PhysicsMaterial(0.1f, 1.0f, 0.0f));
-        sprite->setTag(BRICK_SPRITE_TAG);
     } else if (form == BALL){
         body = PhysicsBody::createCircle(MAX(size.width, size.height)/2.0,
                                          PhysicsMaterial(0.1f, 1.0f, 0.0f));
-        sprite->setTag(BALL_SPRITE_TAG);
     }
-
+    sprite->setTag(tag);
     body->setDynamic(false);
-    body->setContactTestBitmask(0xFFFFFFFF);
+    body->setContactTestBitmask(mask);
     sprite->setPhysicsBody(body);
     sprite->setPosition(p);
     addChild(sprite, 1);
@@ -269,27 +352,30 @@ void HelloWorld::makePhysicsObjAt(Point p, Size size, int form, int v, int n)
         sprite->runAction(Repeat::create(moveBy2, n));
 }
 
-void HelloWorld::makePhysicsObjAt(Point p, Size size, float r, float f, float dens, float rest, int form)
+void HelloWorld::makePhysicsObjAt(int tag, Point p, Size size, float r, float f, float dens, float rest, int form, Animate* anim, std::string name, int mask)
 {
-    auto sprite = Sprite::create();
+    auto sprite = Sprite::createWithSpriteFrameName(name);
+    auto sprite_scale = size.width/sprite->getContentSize().width;
+    sprite->setScale(sprite_scale*1.5);
+    sprite->runAction(RepeatForever::create(anim));
     PhysicsBody* body;
     if (form == BRICK){
         body = PhysicsBody::createBox(size,
                                        PhysicsMaterial(0.1f, 1.0f, 0.0f));
-        sprite->setTag(BRICK_SPRITE_TAG);
     } else if (form == BALL){
         body = PhysicsBody::createCircle(MAX(size.width, size.height)/2.0,
                                       PhysicsMaterial(0.1f, 1.0f, 0.0f));
-        sprite->setTag(BALL_SPRITE_TAG);
     }
+    sprite->setTag(tag);
     body->getShape(0)->setRestitution(rest);
     body->getShape(0)->setFriction(f);
     body->getShape(0)->setDensity(dens);
     body->setDynamic(true);
-    body->setGravityEnable(true);
-    body->setContactTestBitmask(0xFFFFFFFF);
+    //body->setGravityEnable(true);
+    body->setContactTestBitmask(mask); //(0xFFFFFFFF);
     sprite->setPhysicsBody(body);
     sprite->setPosition(p);
+    
     addChild(sprite, 1);
 }
 
@@ -320,13 +406,17 @@ void HelloWorld::onExit()
 void HelloWorld::update(float delta)
 {
     if (mysprite->getNumberOfRunningActions() <= 0){
-        if (isPaused)
+        if (isRestart || isNewLevel)
         {
             this->pausedNodes = cocos2d::Director::getInstance()->getActionManager()->pauseAllRunningActions();
-            restartItem->setVisible(true);
-            mysprite->getPhysicsBody()->setGravityEnable(true);
-
-//            mysprite->getPhysicsBody()->setDynamic(false);
+            if (isRestart)
+            {
+                restartItem->setVisible(true);
+                mysprite->getPhysicsBody()->setGravityEnable(true);
+            }
+            else
+                newlevelItem->setVisible(true);
+            
         }
         else
             mysprite->runAction(RepeatForever::create(animate));
@@ -336,18 +426,26 @@ void HelloWorld::update(float delta)
 
 bool HelloWorld::onContactBegin(cocos2d::PhysicsContact& contact)
 {
-    if (!isPaused){
+    if (!isRestart && !isNewLevel){
         auto nodeA = contact.getShapeA()->getBody()->getNode();
         auto nodeB = contact.getShapeB()->getBody()->getNode();
-        if (nodeA && nodeB)
+        if (nodeA && nodeB && (nodeA->getTag() == HERO_SPRITE_TAG or nodeB->getTag() == HERO_SPRITE_TAG))
         {
-            if (nodeA->getTag() == HERO_SPRITE_TAG or nodeB->getTag() == HERO_SPRITE_TAG)
+            if (nodeA->getTag() == NEWLEVEL_TAG || nodeB->getTag() == NEWLEVEL_TAG)
+            {
+                if (mysprite->getNumberOfRunningActions() > 0){
+                    mysprite->stopAllActions();
+                    mysprite->getPhysicsBody()->setGravityEnable(false);
+                }
+                isNewLevel = true;
+            }
+            else if (nodeB->getTag() != LIMITER_TAG && nodeA->getTag() != LIMITER_TAG)
             {
                 if (mysprite->getNumberOfRunningActions() > 0){
                     mysprite->stopAllActions();
                 }
                 mysprite->runAction(Repeat::create(animateSplash, 1));
-                isPaused = true;
+                isRestart = true;
                 
             }
         }
@@ -358,12 +456,10 @@ bool HelloWorld::onContactBegin(cocos2d::PhysicsContact& contact)
 
 bool HelloWorld::onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event)
 {
-    if (!isPaused){
+    if (!isRestart && !isNewLevel){
         if (mysprite->getNumberOfRunningActions() > 0){
             mysprite->stopAllActions();
         }
-        
-  //      Size visibleSize = Director::getInstance()->getVisibleSize();
         
         if (touch->getLocationInView().x < mysprite->getPositionX()){
             // Move a sprite 50 pixels to the right, and 0 pixels to the top over 2 seconds.
@@ -394,14 +490,16 @@ void HelloWorld::onTouchEnded(cocos2d::Touch* touch, cocos2d::Event* event)
 
 void HelloWorld::menuRestartCallback(Ref *pSender)
 {
-    isPaused = true;
     auto newScene = HelloWorld::createScene();
     cocos2d::Director::getInstance()->replaceScene(newScene);
-//    cocos2d::Director::getInstance()->getActionManager()->resumeTargets(this->pausedNodes);
     restartItem->setVisible(false);
-    //mysprite->getPhysicsBody()->setGravityEnable(false);
-    //mysprite->getPhysicsBody()->setDynamic(true);
+}
 
+void HelloWorld::menuNewLeveltCallback(Ref *pSender)
+{
+   // auto newScene = HelloWorld::createScene();
+   // cocos2d::Director::getInstance()->replaceScene(newScene);
+    newlevelItem->setVisible(false);
 }
 
 void HelloWorld::menuCloseCallback(Ref* pSender)
