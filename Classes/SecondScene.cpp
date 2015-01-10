@@ -21,7 +21,7 @@ Scene* SecondScene::createScene()
 {
     // 'scene' is an autorelease object
     auto scene = Scene::createWithPhysics();
-    scene->getPhysicsWorld()->setDebugDrawMask(PhysicsWorld::DEBUGDRAW_ALL);
+  //  scene->getPhysicsWorld()->setDebugDrawMask(PhysicsWorld::DEBUGDRAW_ALL);
     // 'layer' is an autorelease object
     auto layer = SecondScene::create();
     layer->setPhyWorld(scene->getPhysicsWorld());
@@ -42,8 +42,8 @@ bool SecondScene::init()
         return false;
     }
     
-    Size visibleSize = Director::getInstance()->getVisibleSize();
-    Vec2 origin = Director::getInstance()->getVisibleOrigin();
+    this->visibleSize = Director::getInstance()->getVisibleSize();
+    this->origin = Director::getInstance()->getVisibleOrigin();
     
     /////////////////////////////
     // 2. add a menu item with "X" image, which is clicked to quit the program
@@ -116,20 +116,25 @@ bool SecondScene::init()
     
     //////////////////////////////////////////////////
     //auto map = TMXTiledMap::create("test.tmx");
-    auto map = TMXTiledMap::create("labirint.tmx");
+    this->map = TMXTiledMap::create("labirint.tmx");
     Size s = map->getContentSize();
-    auto scale_mini_map = visibleSize.width / s.width/2;//*5/4;
-    auto scale_map = visibleSize.height / s.height;
+    auto scale_mini_map = visibleSize.width / s.width/4;//*5/4;
+    this->scale_map = visibleSize.height / s.height;
     map->setScale(scale_map);
     auto yZero = origin.y;
     map->setPosition(Vec2(origin.x - s.width*scale_map/2, yZero));
     addChild(map, 0);
-    
-//    auto backLayer = map->getLayer("background");
+
+    auto backLayer = Sprite::create("labirint.png");
+    backLayer->setScale(scale_mini_map);
+    backLayer->setOpacity(230);
+    backLayer->setBlendFunc((BlendFunc) {GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA});
+
+    backLayer->setPosition(Vec2(origin.x + visibleSize.width - backLayer->getContentSize().width*scale_mini_map/2, origin.y  + visibleSize.height - backLayer->getContentSize().height*scale_mini_map/2));
+    addChild(backLayer,2);
 
     TMXObjectGroup *walls = map->getObjectGroup("collisions");
-    makeObject(COLLISION_TAG, walls, scale_map, origin.x - s.width*scale_map/2, yZero, BRICK, 0, 0);
-    walls->setPositionOffset(Vec2(origin.x - s.width*scale_map/2, yZero));
+    this->collisions = makeObject(COLLISION_TAG, walls, scale_map, origin.x - s.width*scale_map/2, yZero, BRICK, 0, 0);
     
 //    TMXObjectGroup *fallings = map->getObjectGroup("fallings");
 //    makeObject(FALLING_TAG, fallings, spidercache, "spider", spidersCount, spidersAnimSize, origin, scale_map, yZero, BALL, 0.5f);
@@ -160,7 +165,7 @@ bool SecondScene::init()
     mysprite->setPosition(Vec2(visibleSize.width/3*2 + origin.x, origin.y + mysprite->getContentSize().height));
     mysprite->setScale(scale_map);
     // now lets animate the sprite we moved
-    
+
     
     Vector<SpriteFrame*> animLeftFrames;
     animLeftFrames.reserve(2);
@@ -200,7 +205,7 @@ bool SecondScene::init()
     
     auto w = mysprite->getContentSize().width;
     auto h = mysprite->getContentSize().height;
-    auto physicsBody = PhysicsBody::createBox(Size(w*scale_map*2/3, w*scale_map*2/3), PhysicsMaterial(0.0f, 0.0f, 0.0f), Vec2(0, -h*scale_map/2 + w*scale_map/3));
+    auto physicsBody = PhysicsBody::createBox(Size(w*scale_map, w*scale_map*2/3), PhysicsMaterial(0.0f, 0.0f, 0.0f), Vec2(0, -h*scale_map/2));
     physicsBody->setRotationEnable(false);
     physicsBody->setDynamic(true);
     physicsBody->setContactTestBitmask(0xFFFFFFFF);
@@ -214,7 +219,7 @@ bool SecondScene::init()
     mysprite->setPhysicsBody(physicsBody);
     
     auto contactListener = EventListenerPhysicsContact::create();
-    contactListener->onContactPostSolve = CC_CALLBACK_1(SecondScene::PhysicsContactPostSolve,
+    contactListener->onContactBegin = CC_CALLBACK_1(SecondScene::onContactBegin,
                                                     this);
     _eventDispatcher->addEventListenerWithSceneGraphPriority(contactListener,
                                                              this);
@@ -267,8 +272,9 @@ void SecondScene::makeObject(int tag, TMXObjectGroup *objects, SpriteFrameCache*
 
 
 
-void SecondScene::makeObject(int tag, TMXObjectGroup *objects, float scale_map, float xZero, float yZero, int form, int v, int n, int mask)
+Vector<Sprite*> SecondScene::makeObject(int tag, TMXObjectGroup *objects, float scale_map, float xZero, float yZero, int form, int v, int n, int mask)
 {
+    Vector<Sprite*> sprites;
     if (objects != nullptr)
     {
         float x, y, w, h;
@@ -283,19 +289,20 @@ void SecondScene::makeObject(int tag, TMXObjectGroup *objects, float scale_map, 
             
             Point _point = Point(xZero+scale_map*(x + w / 2.0f), yZero+scale_map*(y+h/2.0f));
             Size _size = Size(scale_map*w, scale_map*h);
-            this->makePhysicsObjAt(tag, _point, _size, form, v, n, mask);
+            sprites.pushBack(this->makePhysicsObjAt(tag, _point, _size, form, v, n, mask));
+            
         }
     }
-    
+    return sprites;
 }
 
-void SecondScene::makePhysicsObjAt(int tag, Point p, Size size, int form, int v, int n, int mask)
+Sprite* SecondScene::makePhysicsObjAt(int tag, Point p, Size size, int form, int v, int n, int mask)
 {
     auto sprite = Sprite::create();
     PhysicsBody* body;
     if (form == BRICK){
         body = PhysicsBody::createBox(size,
-                                      PhysicsMaterial(0.0f, 0.0f, 0.0f));
+                                      PhysicsMaterial(1.0f, 1.0f, 0.0f));
     } else if (form == BALL){
         body = PhysicsBody::createCircle(MAX(size.width, size.height)/2.0,
                                          PhysicsMaterial(0.1f, 1.0f, 0.0f));
@@ -313,6 +320,7 @@ void SecondScene::makePhysicsObjAt(int tag, Point p, Size size, int form, int v,
         sprite->runAction(RepeatForever::create(moveBy2));
     else
         sprite->runAction(Repeat::create(moveBy2, n));
+    return sprite;
 }
 
 void SecondScene::makePhysicsObjAt(int tag, Point p, Size size, float r, float f, float dens, float rest, int form, Animate* anim, std::string name, int mask)
@@ -324,10 +332,10 @@ void SecondScene::makePhysicsObjAt(int tag, Point p, Size size, float r, float f
     PhysicsBody* body;
     if (form == BRICK){
         body = PhysicsBody::createBox(size,
-                                      PhysicsMaterial(0.0f, 0.0f, 0.0f));
+                                      PhysicsMaterial(1.0f, 1.0f, 0.0f));
     } else if (form == BALL){
         body = PhysicsBody::createCircle(MAX(size.width, size.height)/2.0,
-                                         PhysicsMaterial(0.1f, 1.0f, 0.0f));
+                                         PhysicsMaterial(1.0f, 1.0f, 0.0f));
     }
     sprite->setTag(tag);
     body->getShape(0)->setRestitution(rest);
@@ -381,22 +389,73 @@ void SecondScene::update(float delta)
                 newlevelItem->setVisible(true);
             
         }
-//        else
-//            mysprite->runAction(RepeatForever::create(animateLeft));
+    }
+    
+    if((touchX != -500000) && (touchY != -500000))
+    {
+
+        auto dx = touchX - mysprite->getPositionX();
+        auto dy = touchY - mysprite->getPositionY();
+
+        if (abs(dy) > abs(dx)){
+            if (((dy > 0) && (direction == BOTTOM)) || ((dy < 0) && (direction == TOP)))
+            {
+                if (mysprite->getNumberOfRunningActions() > 0){
+                    mysprite->stopAllActions();
+                    mysprite->getPhysicsBody()->setVelocity(Vec2(0,0));
+                }
+                if (map->getNumberOfRunningActions() > 0){
+                    map->stopAllActions();
+                    stopAllObjectLayer(collisions);
+                }
+
+                goToPoint(dx, dy);
+            }
+        }
+        else if (abs(dy) < abs(dx)){
+            if (((dx > 0) && (direction == LEFT)) || ((dx < 0) && (direction == RIGHT)))
+            {
+                if (mysprite->getNumberOfRunningActions() > 0){
+                    mysprite->stopAllActions();
+                    mysprite->getPhysicsBody()->setVelocity(Vec2(0,0));
+                }
+                if (map->getNumberOfRunningActions() > 0){
+                    map->stopAllActions();
+                    stopAllObjectLayer(collisions);
+                }
+                
+                goToPoint(dx, dy);
+            }
+        }
+    }
+    
+    if ((((map->getPositionX() >= origin.x)||
+          (mysprite->getPositionX() + mysprite->getContentSize().width*scale_map > origin.x + visibleSize.width))
+         && (direction == LEFT)) ||
+        (((map->getContentSize().width*scale_map + map->getPositionX() <= origin.x + visibleSize.width)||
+          (mysprite->getPositionX() - mysprite->getContentSize().width*scale_map < origin.x))
+         && (direction == RIGHT))
+        )
+    {
+        if (map->getNumberOfRunningActions() > 0){
+                map->stopAllActions();
+                stopAllObjectLayer(collisions);
+        }
     }
     
 }
 
-void SecondScene::PhysicsContactPostSolve(cocos2d::PhysicsContact& contact)
+bool SecondScene::onContactBegin(cocos2d::PhysicsContact& contact)
 {
     if (!isRestart && !isNewLevel){
         auto nodeA = contact.getShapeA()->getBody()->getNode();
         auto nodeB = contact.getShapeB()->getBody()->getNode();
         if (nodeA && nodeB && (nodeA->getTag() == HERO_SPRITE_TAG or nodeB->getTag() == HERO_SPRITE_TAG))
         {
-//            if (mysprite->getNumberOfRunningActions() > 0){
-//                mysprite->stopAllActions();
-//            }
+            if (map->getNumberOfRunningActions() > 0){
+                map->stopAllActions();
+                stopAllObjectLayer(collisions);
+            }
             
             if (nodeA->getTag() == NEWLEVEL_TAG || nodeB->getTag() == NEWLEVEL_TAG)
             {
@@ -406,7 +465,23 @@ void SecondScene::PhysicsContactPostSolve(cocos2d::PhysicsContact& contact)
         }
     }
     //bodies can collide
-   // return true;
+    return true;
+}
+
+void SecondScene::moveAllObjectLayer(Vector<Sprite*> sprites, Vec2 offset)
+{
+    for (auto sprite : sprites){
+        sprite->runAction(RepeatForever::create(MoveBy::create(2*ANIMATION_DELAY, offset)));
+    }
+}
+
+void SecondScene::stopAllObjectLayer(Vector<Sprite*> sprites)
+{
+    for (auto sprite : sprites){
+        if (sprite->getNumberOfRunningActions() > 0){
+            sprite->stopAllActions();
+        }
+    }
 }
 
 bool SecondScene::onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event)
@@ -415,32 +490,11 @@ bool SecondScene::onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event)
     cocos2d::log("tgirl %f, %f", mysprite->getPositionX(), mysprite->getPositionY());
     
     if (!isRestart && !isNewLevel){
-        if (mysprite->getNumberOfRunningActions() > 0){
-            mysprite->stopAllActions();
-        }
+        touchX = touch->getLocation().x;
+        touchY = touch->getLocation().y;
         auto dx = touch->getLocation().x - mysprite->getPositionX();
         auto dy = touch->getLocation().y - mysprite->getPositionY();
-        auto step = 10;
-        auto num_step = 10;
-        if (abs(dx) > abs(dy)){
-            if (dx > 0) {
-                mysprite->runAction(Repeat::create(animateRight,num_step));
-                mysprite->runAction(Repeat::create(MoveBy::create(2*ANIMATION_DELAY, Vec2(step, 0)), num_step));
-            }
-            else {
-                mysprite->runAction(Repeat::create(animateLeft,num_step));
-                mysprite->runAction(Repeat::create(MoveBy::create(2*ANIMATION_DELAY, Vec2(-step, 0)), num_step));
-            }
-        }
-        else {
-            if (dy < 0) {
-                mysprite->runAction(Repeat::create(animateBottom,num_step));
-                mysprite->runAction(Repeat::create(MoveBy::create(2*ANIMATION_DELAY, Vec2(0, -step)), num_step));            }
-            else {
-                mysprite->runAction(Repeat::create(animateTop,num_step));
-                mysprite->runAction(Repeat::create(MoveBy::create(2*ANIMATION_DELAY, Vec2(0, step)), num_step));
-            }
-        }
+        goToPoint(dx, dy);
     }
 
     
@@ -448,14 +502,70 @@ bool SecondScene::onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event)
     return true;
 }
 
+
+void SecondScene::goToPoint(float dx, float dy)
+{
+    if (mysprite->getNumberOfRunningActions() > 0){
+        mysprite->stopAllActions();
+    }
+
+    auto v = 50;
+    if (abs(dx) > abs(dy)){
+        if (dx > 0) {
+            mysprite->runAction(RepeatForever::create(animateRight));
+            mysprite->getPhysicsBody()->setVelocity(Vec2(v,0));
+            
+            direction = RIGHT;
+            if (map->getContentSize().width*scale_map + map->getPositionX() > origin.x + visibleSize.width){
+                auto moveRight = MoveBy::create(2*ANIMATION_DELAY, Vec2(-v*2*ANIMATION_DELAY*2, 0));
+                map->runAction(RepeatForever::create(moveRight));
+                moveAllObjectLayer(collisions, Vec2(-v*2*ANIMATION_DELAY*2, 0));
+            }
+        }
+        else {
+            mysprite->runAction(RepeatForever::create(animateLeft));
+            mysprite->getPhysicsBody()->setVelocity(Vec2(-v,0));
+            
+            direction = LEFT;
+            if (map->getPositionX() < origin.x){
+                auto moveLeft = MoveBy::create(2*ANIMATION_DELAY, Vec2(v*2*ANIMATION_DELAY*2, 0));
+                map->runAction(RepeatForever::create(moveLeft));
+                moveAllObjectLayer(collisions, Vec2(v*2*ANIMATION_DELAY*2, 0));
+            }
+        }
+    }
+    else {
+        if (dy < 0) {
+            direction = BOTTOM;
+            mysprite->runAction(RepeatForever::create(animateBottom));
+            mysprite->getPhysicsBody()->setVelocity(Vec2(0,-2*v));
+        }
+        else {
+            direction = TOP;
+            mysprite->runAction(RepeatForever::create(animateTop));
+            mysprite->getPhysicsBody()->setVelocity(Vec2(0,2*v));
+        }
+    }
+}
+
 void SecondScene::onTouchMoved(cocos2d::Touch* touch, cocos2d::Event* event)
 {
-    
+    cocos2d::log("You touch moved %f, %f", touch->getLocation().x, touch->getLocation().y);
+
 }
 
 void SecondScene::onTouchEnded(cocos2d::Touch* touch, cocos2d::Event* event)
 {
-    
+    touchX = -500000;
+    touchY = -500000;
+    if (mysprite->getNumberOfRunningActions() > 0){
+        mysprite->stopAllActions();
+        mysprite->getPhysicsBody()->setVelocity(Vec2(0,0));
+    }
+    if (map->getNumberOfRunningActions() > 0){
+        map->stopAllActions();
+        stopAllObjectLayer(collisions);
+    }
     
 }
 
