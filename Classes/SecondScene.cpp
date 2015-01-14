@@ -378,6 +378,9 @@ void SecondScene::onEnter()
     auto contactListener = EventListenerPhysicsContact::create();
     contactListener->onContactBegin = CC_CALLBACK_1(SecondScene::onContactBegin,
                                                     this);
+    
+    contactListener->onContactSeperate = CC_CALLBACK_1(SecondScene::onContactSeperate,
+                                                       this);
     //_eventDispatcher->addEventListenerWithSceneGraphPriority(contactListener,
 //                                                             this);
     dispatcher->addEventListenerWithSceneGraphPriority(contactListener,
@@ -468,6 +471,15 @@ void SecondScene::update(float delta)
     }
 }
 
+void SecondScene::onContactSeperate(const cocos2d::PhysicsContact& contact)
+{
+    auto dx = touchX - mysprite->getPositionX();
+    auto dy = touchY - mysprite->getPositionY() + mysprite->getContentSize().height*scale_map/2;
+    direction = NODIRECTION;
+    goToPoint(dx, dy);
+
+}
+
 bool SecondScene::onContactBegin(const cocos2d::PhysicsContact& contact)
 {
     if (!isRestart && !isNewLevel){
@@ -476,6 +488,12 @@ bool SecondScene::onContactBegin(const cocos2d::PhysicsContact& contact)
         if (nodeA && nodeB && (nodeA->getTag() == HERO_SPRITE_TAG or nodeB->getTag() == HERO_SPRITE_TAG))
         {
             if (nodeA->getTag() != PORTAL_TAG && nodeB->getTag() != PORTAL_TAG) {
+                    if((touchX != -500000) && (touchY != -500000)) {
+                    auto dx = touchX - mysprite->getPositionX();
+                    auto dy = touchY - mysprite->getPositionY() + mysprite->getContentSize().height*scale_map/2;
+                    direction = NODIRECTION;
+                    goToPoint(dx, dy);
+                }
             //    stopAllObjects();
             }
             else if (isPortal){

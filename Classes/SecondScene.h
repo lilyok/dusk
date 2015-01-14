@@ -66,6 +66,7 @@ private:
     void goToPoint(float dx, float dy);
     
     bool onContactBegin(const cocos2d::PhysicsContact& contact);
+    void onContactSeperate(const cocos2d::PhysicsContact& contact);
     bool isRestart = false;
     bool isNewLevel = false;
     int direction = NODIRECTION;
