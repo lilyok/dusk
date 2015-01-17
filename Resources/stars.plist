@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+	<dict>
+		<key>frames</key>
+		<dict>
+			<key>star01.png</key>
+			<dict>
+				<key>frame</key>
+				<string>{{279,89},{78,84}}</string>
+				<key>offset</key>
+				<string>{0,0}</string>
+				<key>rotated</key>
+				<false/>
+				<key>sourceColorRect</key>
+				<string>{{0,0},{78,84}}</string>
+				<key>sourceSize</key>
+				<string>{78,84}</string>
+			</dict>
+
+			<key>star02.png</key>
+			<dict>
+				<key>frame</key>
+				<string>{{193,92},{85,90}}</string>
+				<key>offset</key>
+				<string>{0,0}</string>
+				<key>rotated</key>
+				<false/>
+				<key>sourceColorRect</key>
+				<string>{{0,0},{85,90}}</string>
+				<key>sourceSize</key>
+				<string>{86,91}</string>
+			</dict>
+
+			<key>star03.png</key>
+			<dict>
+				<key>frame</key>
+				<string>{{279,0},{84,88}}</string>
+				<key>offset</key>
+				<string>{0,0}</string>
+				<key>rotated</key>
+				<false/>
+				<key>sourceColorRect</key>
+				<string>{{0,0},{84,88}}</string>
+				<key>sourceSize</key>
+				<string>{85,89}</string>
+			</dict>
+
+			<key>star04.png</key>
+			<dict>
+				<key>frame</key>
+				<string>{{192,0},{86,91}}</string>
+				<key>offset</key>
+				<string>{0,0}</string>
+				<key>rotated</key>
+				<false/>
+				<key>sourceColorRect</key>
+				<string>{{0,0},{86,91}}</string>
+				<key>sourceSize</key>
+				<string>{87,92}</string>
+			</dict>
+
+			<key>star05.png</key>
+			<dict>
+				<key>frame</key>
+				<string>{{102,0},{89,92}}</string>
+				<key>offset</key>
+				<string>{0,0}</string>
+				<key>rotated</key>
+				<false/>
+				<key>sourceColorRect</key>
+				<string>{{0,0},{89,92}}</string>
+				<key>sourceSize</key>
+				<string>{89,93}</string>
+			</dict>
+
+			<key>star06.png</key>
+			<dict>
+				<key>frame</key>
+				<string>{{97,94},{95,93}}</string>
+				<key>offset</key>
+				<string>{0,0}</string>
+				<key>rotated</key>
+				<false/>
+				<key>sourceColorRect</key>
+				<string>{{0,0},{95,93}}</string>
+				<key>sourceSize</key>
+				<string>{96,93}</string>
+			</dict>
+
+			<key>star07.png</key>
+			<dict>
+				<key>frame</key>
+				<string>{{0,94},{96,93}}</string>
+				<key>offset</key>
+				<string>{0,0}</string>
+				<key>rotated</key>
+				<false/>
+				<key>sourceColorRect</key>
+				<string>{{0,0},{96,93}}</string>
+				<key>sourceSize</key>
+				<string>{96,93}</string>
+			</dict>
+
+			<key>star08.png</key>
+			<dict>
+				<key>frame</key>
+				<string>{{0,0},{101,93}}</string>
+				<key>offset</key>
+				<string>{0,0}</string>
+				<key>rotated</key>
+				<false/>
+				<key>sourceColorRect</key>
+				<string>{{0,0},{101,93}}</string>
+				<key>sourceSize</key>
+				<string>{101,93}</string>
+			</dict>
+
+		</dict>
+
+		<key>metadata</key>
+		<dict>
+			<key>format</key>
+			<integer>2</integer>
+			<key>size</key>
+			<string>{512,256}</string>
+			<key>textureFileName</key>
+			<string>stars.png</string>
+			</dict>
+		</dict>
+</plist>

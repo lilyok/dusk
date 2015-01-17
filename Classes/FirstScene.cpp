@@ -1,5 +1,6 @@
 #include "FirstScene.h"
 #include "MenuScene.h"
+#include "SecondScene.h"
 
 USING_NS_CC;
 #define HERO_SPRITE_TAG 5
@@ -10,7 +11,7 @@ USING_NS_CC;
 #define BRICK 1
 #define BALL 2
 #define COLLISION_V 100.0
-#define BACKGROUND_V 40.0
+#define BACKGROUND_V 60.0
 
 Scene* FirstScene::createScene()
 {
@@ -496,7 +497,7 @@ void FirstScene::menuRestartCallback(Ref *pSender)
 
 void FirstScene::menuNewLeveltCallback(Ref *pSender)
 {
-    auto newScene = MenuScene::createScene();
+    auto newScene = SecondScene::createScene();
     cocos2d::Director::getInstance()->replaceScene(newScene);
     newlevelItem->setVisible(false);
 }
