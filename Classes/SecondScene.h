@@ -46,6 +46,8 @@ protected:
     cocos2d::Vector<cocos2d::Sprite*> collisions;
     cocos2d::Vector<cocos2d::Sprite*> portals;
     cocos2d::Vector<cocos2d::Sprite*> fallings;
+    cocos2d::Vector<cocos2d::Sprite*> pluses;
+    
     
 private:
     virtual void onEnter();

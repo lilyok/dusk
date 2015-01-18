@@ -13,6 +13,7 @@ USING_NS_CC;
 #define HERO_SPRITE_TAG 5
 #define COLLISION_TAG 10
 #define FALLING_TAG 20
+#define PLUS_TAG 30
 
 #define PORTAL_TAG 100
 
@@ -27,7 +28,7 @@ Scene* SecondScene::createScene()
 {
     // 'scene' is an autorelease object
     auto scene = Scene::createWithPhysics();
-  //  scene->getPhysicsWorld()->setDebugDrawMask(PhysicsWorld::DEBUGDRAW_ALL);
+   // scene->getPhysicsWorld()->setDebugDrawMask(PhysicsWorld::DEBUGDRAW_ALL);
     // 'layer' is an autorelease object
     auto layer = SecondScene::create();
     layer->setPhyWorld(scene->getPhysicsWorld());
@@ -139,8 +140,10 @@ bool SecondScene::init()
     backLayer->setPosition(Vec2(origin.x + visibleSize.width - backLayer->getContentSize().width*scale_mini_map/2, origin.y  + visibleSize.height - backLayer->getContentSize().height*scale_mini_map/2));
     addChild(backLayer,2);
 
+    
     TMXObjectGroup *walls = map->getObjectGroup("collisions");
-    this->collisions = makeObject(COLLISION_TAG, walls, scale_map, origin.x + visibleSize.width - s.width*scale_map, yZero, BRICK, 0, 0);
+
+    this->collisions = this->collisions = makeObject(COLLISION_TAG, walls, scale_map, origin.x + visibleSize.width - s.width*scale_map, yZero, BRICK, 0, 0);
 
 
     auto portalcache = SpriteFrameCache::getInstance();
@@ -173,10 +176,20 @@ bool SecondScene::init()
 //    TMXObjectGroup *newlevel = map->getObjectGroup("newlevel");
 //    makeObject(NEWLEVEL_TAG, newlevel, origin, scale_map, yZero, BRICK, -COLLISION_V, n);
     
+    //////////////////////////////////////////////////
+    auto healthcache = SpriteFrameCache::getInstance();
+    healthcache->addSpriteFramesWithFile("plus.plist");
+    TMXObjectGroup *health = map->getObjectGroup("health");
+    auto plusCount = 1;
+    auto plusAnimSize = 4;
+    this->pluses = makeObject(PLUS_TAG, health, healthcache, "plus",
+                                plusCount, plusAnimSize, scale_map, origin.x + visibleSize.width - s.width*scale_map, yZero, BALL, 0.1f, false, 0.0f, 0.0f, 0.0f);
+
+    
     
     //////////////////////////////////////////////////
     SpriteFrameCache::getInstance()->addSpriteFramesWithFile("life.plist");
-    this->mylife = Sprite::create("life3.png");
+    this->mylife = Sprite::createWithSpriteFrameName("life3.png");
     this->mylife->setScale(scale_map);
     mylife->setOpacity(230);
     mylife->setBlendFunc((BlendFunc) {GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA});
@@ -261,13 +274,21 @@ bool SecondScene::init()
     
     addChild(minisprite, 2);
 
+    bool isFire = true;
+    for (auto c : collisions){
+        auto cpos = c->getPosition();
+        if(c->getTag() != 0){
+            if(isFire) {
+                ParticleSystemQuad* m_emitter = ParticleSystemQuad::create() ;
+                m_emitter = ParticleFire::create();
+                m_emitter->setScale(scale_map/2);
+                m_emitter->setPosition(0,0);
+                c->addChild(m_emitter);
+            }
+            isFire = !isFire;
+        }
+    }
 
-//    ParticleSystemQuad* m_emitter = ParticleSystemQuad::create() ;
-//    m_emitter = ParticleFire::create();
-//    m_emitter->setScale(scale_map/2);
-//
-//    m_emitter->setPosition(origin.x + visibleSize.width/2, origin.y + visibleSize.height/2);
-//    addChild(m_emitter,3);
     this->scheduleUpdate();
     return true;
 }
@@ -313,8 +334,11 @@ Vector<Sprite*> SecondScene::makeObject(int tag, TMXObjectGroup *objects, Sprite
             std::sprintf(res, "%s%02i.png", name.c_str(), (i%spritecount)*animsize + 1);
             auto sprite = this->makePhysicsObjAt(tag, _point, _size, isDynamic, rest, fric, dens, form,
                     anim.at(i%spritecount)->clone(), res, mask);
-            i++;
+
             auto sprite_name = objPoint.at("name").asString();
+            if (sprite_name == "") sprite_name = std::to_string(i);
+            i++;
+
             sprite->setName(sprite_name);
             sprites.pushBack(sprite);
         }
@@ -333,6 +357,7 @@ Vector<Sprite*> SecondScene::makeObject(int tag, TMXObjectGroup *objects, float 
         float x, y, w, h;
         ValueVector objectsPoint = objects->getObjects();
         
+        int i = 0;
         for(auto objPointMap : objectsPoint)
         {
             ValueMap objPoint = objPointMap.asValueMap();
@@ -343,8 +368,11 @@ Vector<Sprite*> SecondScene::makeObject(int tag, TMXObjectGroup *objects, float 
             auto name = objPoint.at("name").asString();
             Point _point = Point(xZero+scale_map*(x + w / 2.0f), yZero+scale_map*(y+h/2.0f));
             Size _size = Size(scale_map*w, scale_map*h);
+            if (name == "dummy") tag = 0;
             auto sprite = this->makePhysicsObjAt(tag, _point, _size, form, v, n, mask);
             
+            if (name == "") name = std::to_string(i);
+            i++;
             sprite->setName(name);
             sprites.pushBack(sprite);
             
@@ -356,7 +384,10 @@ Vector<Sprite*> SecondScene::makeObject(int tag, TMXObjectGroup *objects, float 
 Sprite* SecondScene::makePhysicsObjAt(int tag, Point p, Size size, int form, int v, int n, int mask)
 {
     auto sprite = Sprite::create();
+    
     PhysicsBody* body;
+    
+    
     if (form == BRICK){
         body = PhysicsBody::createBox(size,
                                       PhysicsMaterial(1.0f, 1.0f, 0.0f));
@@ -364,10 +395,12 @@ Sprite* SecondScene::makePhysicsObjAt(int tag, Point p, Size size, int form, int
         body = PhysicsBody::createCircle(MAX(size.width, size.height)/2.0,
                                          PhysicsMaterial(0.1f, 1.0f, 0.0f));
     }
+    
+    sprite->setPhysicsBody(body);
     sprite->setTag(tag);
     body->setDynamic(false);
     body->setContactTestBitmask(mask);
-    sprite->setPhysicsBody(body);
+//    sprite->setPhysicsBody(body);
     sprite->setPosition(p);
     addChild(sprite, 1);
     
@@ -467,6 +500,22 @@ void SecondScene::update(float delta)
             }
         }
 
+        for (auto plus: pluses){
+            if (plus->getOpacity() < 255) {
+                if(plus->getOpacity() == 0) {
+                    Vector<SpriteFrame*> plusFrames;
+                    plusFrames.reserve(4);
+                    plusFrames.pushBack(SpriteFrameCache::getInstance()->getSpriteFrameByName("plus01.png"));
+                    plusFrames.pushBack(SpriteFrameCache::getInstance()->getSpriteFrameByName("plus02.png"));
+                    plusFrames.pushBack(SpriteFrameCache::getInstance()->getSpriteFrameByName("plus03.png"));
+                    plusFrames.pushBack(SpriteFrameCache::getInstance()->getSpriteFrameByName("plus04.png"));
+ 
+                    Animate *animate = Animate::create(Animation::createWithSpriteFrames(plusFrames, 0.1f));
+                    plus->runAction(RepeatForever::create(animate));
+                }
+                plus->setOpacity(plus->getOpacity() + 1);
+            }
+        }
         if ((touchX != -500000) && (touchY != -500000)) {
             auto next_dx = touchX - mysprite->getPositionX();
             auto next_dy = touchY - mysprite->getPositionY() + mysprite->getContentSize().height * scale_map / 2;
@@ -518,6 +567,7 @@ void SecondScene::update(float delta)
             setPositionOffsetAllObjectLayer(collisions, Vec2(dx, 0));
             setPositionOffsetAllObjectLayer(portals, Vec2(dx, 0));
             setPositionOffsetAllObjectLayer(fallings, Vec2(dx, 0));
+            setPositionOffsetAllObjectLayer(pluses, Vec2(dx, 0));
 
 
         }
@@ -535,10 +585,22 @@ void SecondScene::onContactSeperate(const cocos2d::PhysicsContact& contact)
             direction = NODIRECTION;
             goToPoint(dx, dy);
         }
+        
+        auto nodeA = contact.getShapeA()->getBody()->getNode();
+        auto nodeB = contact.getShapeB()->getBody()->getNode();
+        
+        if ((nodeA->getTag() == HERO_SPRITE_TAG or nodeB->getTag() == HERO_SPRITE_TAG)  and
+            (nodeA->getTag() == PLUS_TAG or nodeB->getTag() == PLUS_TAG)) {
+            Node* node;
+            if (nodeA->getTag() == PLUS_TAG) node = nodeA;
+            else node = nodeB;
+            if (node->getOpacity() == 255){
+                node->setOpacity(0);
+                node->setGlobalZOrder(0);
+            }
+        }
+        
         if (!isSpiderPortal) {
-            auto nodeA = contact.getShapeA()->getBody()->getNode();
-            auto nodeB = contact.getShapeB()->getBody()->getNode();
-
             if ((nodeA->getTag() == PORTAL_TAG || nodeB->getTag() == PORTAL_TAG) &&
                     (nodeA->getTag() == FALLING_TAG || nodeB->getTag() == FALLING_TAG)) {
                 isSpiderPortal = true;
@@ -556,21 +618,43 @@ bool SecondScene::onContactBegin(const cocos2d::PhysicsContact& contact)
         if (nodeA && nodeB /*&& (nodeA->getTag() == HERO_SPRITE_TAG or nodeB->getTag() == HERO_SPRITE_TAG)*/)
         {
             if (nodeA->getTag() != PORTAL_TAG && nodeB->getTag() != PORTAL_TAG) {
-                if ((nodeA->getTag() == HERO_SPRITE_TAG or nodeB->getTag() == HERO_SPRITE_TAG) and
-                        (nodeA->getTag() == FALLING_TAG or nodeB->getTag() == FALLING_TAG)) {
-                    if (life_num > 0) {
-                        life_num--;
+                if (nodeA->getTag() == HERO_SPRITE_TAG or nodeB->getTag() == HERO_SPRITE_TAG) {
+                    if (nodeA->getTag() == FALLING_TAG or nodeB->getTag() == FALLING_TAG) {
+                        if (life_num > 0) {
+                            life_num--;
 
-                        char *res = new char[50];
-                        std::sprintf(res, "life%i.png", life_num);
-                        SpriteFrame *sp = SpriteFrameCache::getInstance()->getSpriteFrameByName(res);
-                        mylife->setSpriteFrame(sp);
+                            char *res = new char[50];
+                            std::sprintf(res, "life%i.png", life_num);
+                            SpriteFrame *sp = SpriteFrameCache::getInstance()->getSpriteFrameByName(res);
+                            mylife->setSpriteFrame(sp);
 
-                        if (life_num == 0) {
-                            isRestart = true;
-                            stopScene();
-                            restartItem->setVisible(true);
+                            if (life_num == 0) {
+                                isRestart = true;
+                                stopScene();
+                                restartItem->setVisible(true);
+                            }
                         }
+                    }
+                    if (nodeA->getTag() == PLUS_TAG or nodeB->getTag() == PLUS_TAG) {
+                        SpriteFrame *sp = SpriteFrameCache::getInstance()->getSpriteFrameByName("plussplash.png");
+                        Node* node;
+                        if (nodeA->getTag() == PLUS_TAG) node = nodeA;
+                        else node = nodeB;
+                        if (node->getOpacity() == 255) {
+                            auto plus = pluses.at(std::stoi(node->getName()));
+                            if (plus->getNumberOfRunningActions() > 0){
+                                plus->stopAllActions();
+                            }
+                            if(life_num < 3) life_num++;
+                            char *res = new char[50];
+                            std::sprintf(res, "life%i.png", life_num);
+                            SpriteFrame *splife = SpriteFrameCache::getInstance()->getSpriteFrameByName(res);
+                            mylife->setSpriteFrame(splife);
+                            
+                            plus->setSpriteFrame(sp);
+                            plus->setGlobalZOrder(3);
+                        }
+                        return false;
                     }
                 }
 
@@ -782,6 +866,7 @@ void SecondScene::stopScene()
     }
     stopAllObjectLayer(portals);
     stopAllObjectLayer(fallings);
+    stopAllObjectLayer(pluses);
 }
 
 void SecondScene::stopAllObjects()
