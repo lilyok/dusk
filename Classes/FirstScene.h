@@ -44,7 +44,7 @@ private:
     bool onContactBegin(cocos2d::PhysicsContact& contact);
     bool isRestart = false;
     bool isNewLevel = false;
-    
+    float scale_map;
     //cocos2d::TMXTiledMap* map;
     cocos2d::MenuItemImage* restartItem;
     cocos2d::MenuItemImage* newlevelItem;

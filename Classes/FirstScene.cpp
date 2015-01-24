@@ -17,7 +17,7 @@ Scene* FirstScene::createScene()
 {
     // 'scene' is an autorelease object
     auto scene = Scene::createWithPhysics();
-    //scene->getPhysicsWorld()->setDebugDrawMask(PhysicsWorld::DEBUGDRAW_ALL);
+  //  scene->getPhysicsWorld()->setDebugDrawMask(PhysicsWorld::DEBUGDRAW_ALL);
     // 'layer' is an autorelease object
     auto layer = FirstScene::create();
     layer->setPhyWorld(scene->getPhysicsWorld());
@@ -212,43 +212,45 @@ bool FirstScene::init()
     //auto map = TMXTiledMap::create("test.tmx");
     auto map = TMXTiledMap::create("holeTile.tmx");
     Size s = map->getContentSize();
-    auto scale_map =visibleSize.width / s.width;
+    scale_map =visibleSize.width / s.width;
+    
     map->setScale(scale_map);
-    auto yZero = origin.y+ visibleSize.height - map->getContentSize().height;
-    int n = ceil((s.height + visibleSize.height/2.0 - yZero*scale_map)/COLLISION_V);
-    map->setPosition(Vec2(origin.x, yZero));
+    auto yZero = origin.y+ visibleSize.height - map->getContentSize().height*scale_map;
+    float cvelocity = COLLISION_V*scale_map;
+    int n = ceil(s.height*scale_map/cvelocity);
+    map->setPosition(Vec2(origin.x, origin.y));//yZero));
    //cocos2d: scale_map = 2.500000, sheight 1280.000000, vheight = 1136.000000, yZero -144.000000, n 45, n1 15
     addChild(map, 0);
   
-    auto moveBy = MoveBy::create(1, Vec2(0, -BACKGROUND_V/scale_map));
+    auto moveBy = MoveBy::create(1, Vec2(0, -BACKGROUND_V));
     
     auto backLayer = map->getLayer("back");
     backLayer->runAction(Repeat::create(moveBy, n));
-    auto collisionMoveBy = MoveBy::create(1, Vec2(0, -COLLISION_V/scale_map));
+    auto collisionMoveBy = MoveBy::create(1, Vec2(0, -cvelocity/scale_map));
     cocos2d::log("height %f, yZero %f, n %i", s.height, yZero, n);
     auto collisionsLayer = map->getLayer("collisionslayer");
     collisionsLayer->runAction(Repeat::create(collisionMoveBy, n));
     
-    auto crowdholeMoveBy = MoveBy::create(1, Vec2(0, -COLLISION_V/scale_map));
+    auto crowdholeMoveBy = MoveBy::create(1, Vec2(0, -cvelocity/scale_map));
     auto crowdhole = map->getLayer("crowhole");
     crowdhole->runAction(Repeat::create(crowdholeMoveBy, n));
-    auto crowdLayerMoveBy = MoveBy::create(1, Vec2(0, -COLLISION_V/scale_map));
+    auto crowdLayerMoveBy = MoveBy::create(1, Vec2(0, -cvelocity/scale_map));
     auto crowdLayer = map->getLayer("crowdlayer");
     crowdLayer->runAction(Repeat::create(crowdLayerMoveBy, n));
     crowdLayer->setGlobalZOrder(2);// setPositionZ(2);
   //  map->reorderChild(crowdLayer, 1);
     
     TMXObjectGroup *walls = map->getObjectGroup("collisions");
-    makeObject(COLLISION_TAG, walls, origin, scale_map, yZero, BRICK, -COLLISION_V, n);
+    makeObject(COLLISION_TAG, walls, origin, scale_map, 0, BRICK, -cvelocity, n);
     
     TMXObjectGroup *fallings = map->getObjectGroup("fallings");
-    makeObject(FALLING_TAG, fallings, spidercache, "spider", spidersCount, spidersAnimSize, origin, scale_map, yZero, BALL, 0.5f);
+    makeObject(FALLING_TAG, fallings, spidercache, "spider", spidersCount, spidersAnimSize, origin, scale_map, 0, BALL, 0.5f);
 
     TMXObjectGroup *limiter = map->getObjectGroup("limiter");
-    makeObject(LIMITER_TAG, limiter , origin, scale_map, yZero, BRICK, -COLLISION_V, n);
+    makeObject(LIMITER_TAG, limiter , origin, scale_map, 0, BRICK, -cvelocity, n);
     
     TMXObjectGroup *newlevel = map->getObjectGroup("newlevel");
-    makeObject(NEWLEVEL_TAG, newlevel, origin, scale_map, yZero, BRICK, -COLLISION_V, n);
+    makeObject(NEWLEVEL_TAG, newlevel, origin, scale_map, 0, BRICK, -cvelocity, n);
     
     auto contactListener = EventListenerPhysicsContact::create();
     contactListener->onContactBegin = CC_CALLBACK_1(FirstScene::onContactBegin,
@@ -355,6 +357,7 @@ void FirstScene::makePhysicsObjAt(int tag, Point p, Size size, int form, int v, 
 void FirstScene::makePhysicsObjAt(int tag, Point p, Size size, float r, float f, float dens, float rest, int form, Animate* anim, std::string name, int mask)
 {
     auto sprite = Sprite::createWithSpriteFrameName(name);
+    
     auto sprite_scale = size.width/sprite->getContentSize().width;
     sprite->setScale(sprite_scale*1.5);
     sprite->runAction(RepeatForever::create(anim));
@@ -371,6 +374,7 @@ void FirstScene::makePhysicsObjAt(int tag, Point p, Size size, float r, float f,
     body->getShape(0)->setFriction(f);
     body->getShape(0)->setDensity(dens);
     body->setDynamic(true);
+    body->setRotationEnable(false);
     //body->setGravityEnable(true);
     body->setContactTestBitmask(mask); //(0xFFFFFFFF);
     sprite->setPhysicsBody(body);
@@ -465,11 +469,11 @@ bool FirstScene::onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event)
             // Move a sprite 50 pixels to the right, and 0 pixels to the top over 2 seconds.
             
             mysprite->runAction(Repeat::create(animateLeft,2));
-            mysprite->getPhysicsBody()->setVelocity(Vec2(-100,0));
+            mysprite->getPhysicsBody()->setVelocity(Vec2(-COLLISION_V*scale_map/1.5,0));
             
         } else {
             mysprite->runAction(Repeat::create(animateRight,2));
-            mysprite->getPhysicsBody()->setVelocity(Vec2(100,0));
+            mysprite->getPhysicsBody()->setVelocity(Vec2(COLLISION_V*scale_map/1.5,0));
         }
     }
     cocos2d::log("You touched %f, %f", touch->getLocationInView().x, touch->getLocationInView().y);

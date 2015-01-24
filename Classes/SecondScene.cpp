@@ -24,6 +24,8 @@ USING_NS_CC;
 
 #define MIN_FOR_DIRECTION 10
 
+#define MY_VELOCITY 300
+
 Scene* SecondScene::createScene()
 {
     // 'scene' is an autorelease object
@@ -889,11 +891,11 @@ void SecondScene::goToPoint(float dx, float dy)
         bool isChangedDirection = false;
         float vx = 0.0;
         float vy = 0.0;
-        if (dx > 0) vx = 100.0;
-        else vx = -100.0;
+        if (dx > 0) vx = MY_VELOCITY*scale_map;
+        else vx = -MY_VELOCITY*scale_map;
         
-        if (dy > 0) vy = 100.0;
-        else vy = -100.0;
+        if (dy > 0) vy = MY_VELOCITY*scale_map;
+        else vy = -MY_VELOCITY*scale_map;
         
         auto body = mysprite->getPhysicsBody();
         auto pos = body->getPositionOffset();
