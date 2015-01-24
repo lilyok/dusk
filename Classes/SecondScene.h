@@ -47,7 +47,7 @@ protected:
     cocos2d::Vector<cocos2d::Sprite*> portals;
     cocos2d::Vector<cocos2d::Sprite*> fallings;
     cocos2d::Vector<cocos2d::Sprite*> pluses;
-    
+    cocos2d::ParticleSystemQuad* m_emitter;
     
 private:
     virtual void onEnter();
@@ -68,6 +68,7 @@ private:
     cocos2d::Sprite* makePhysicsObjAt(int tag, cocos2d::Point p, cocos2d::Size size, bool isDynamic, float rest, float fric, float dens, int form, cocos2d::Animate* anim, std::string name, int mask = 0xFFFFFFFF);
     cocos2d::Sprite* makePhysicsObjAt(int tag, cocos2d::Point p, cocos2d::Size size, int form, int v = 0, int n = -1, int mask = 0xFFFFFFFF);
     
+    void setTintBy(cocos2d::Sprite* collision, int i);
     void setPositionOffsetAllObjectLayer(cocos2d::Vector<cocos2d::Sprite*> sprites, cocos2d::Vec2 offset);
     void moveAllObjectLayer(cocos2d::Vector<cocos2d::Sprite*> sprites, cocos2d::Vec2 offset);
     void stopAllObjectLayer(cocos2d::Vector<cocos2d::Sprite*> sprites);
@@ -82,7 +83,7 @@ private:
     int direction = NODIRECTION;
     float touchX = -500000;
     float touchY = -500000;
-    bool isPortal = false;
+    bool isPortal = true;
     bool isSpiderPortal = true;
     float scale_map = 1.0;
     float scale_mini_map = 1.0;
