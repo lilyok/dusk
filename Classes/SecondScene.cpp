@@ -542,32 +542,6 @@ void SecondScene::update(float delta)
                 plus->setOpacity(plus->getOpacity() + 1);
             }
         }
-//        if ((touchX != -500000) && (touchY != -500000)) {
-//            auto next_dx = touchX - mysprite->getPositionX();
-//            auto next_dy = touchY - mysprite->getPositionY() + mysprite->getContentSize().height * scale_map / 2;
-//
-//            Vec2 vv = mysprite->getPhysicsBody()->getVelocity();
-//            float vx = vv.x;
-//            float vy = vv.y;
-//            if (((next_dx > 0) && (direction == LEFT)) || ((next_dx < 0) && (direction == RIGHT))) {
-//                vx = 0.0;
-//            }
-//            if (((next_dy > 0) && (direction == BOTTOM)) || ((next_dy < 0) && (direction == TOP))) {
-//                vy = 0.0;
-//            }
-//
-//
-//            if ((vy != vv.y) || (vx != vv.x)) {
-//                if (vy > 0) direction = TOP;
-//                else if (vy < 0) direction = BOTTOM;
-//                else if (vx > 0) direction = RIGHT;
-//                else if (vx < 0) direction = LEFT;
-//                else direction = NODIRECTION;
-//                mysprite->getPhysicsBody()->setVelocity(Vec2(vx, vy));
-//            }
-//        } else {
-//            stopAllObjects();
-//        }
 
 
         auto dx = 0.0;
@@ -786,10 +760,6 @@ bool SecondScene::onContactBegin(const cocos2d::PhysicsContact& contact)
 
             }
             
-//            if (nodeA->getTag() == NEWLEVEL_TAG || nodeB->getTag() == NEWLEVEL_TAG)
-//            {
-//                isNewLevel = true;
-//            }
 
         }
     }
@@ -868,12 +838,7 @@ void SecondScene::onTouchMoved(cocos2d::Touch* touch, cocos2d::Event* event)
     if (!isRestart && !isNewLevel && isPortal){
         touchX = touch->getLocation().x;
         touchY = touch->getLocation().y;
-//        auto dx = touch->getLocation().x - mysprite->getPositionX();
-//        auto dy = touch->getLocation().y - mysprite->getPositionY() + mysprite->getContentSize().height*scale_map/2;
-
-//        goToPoint(dx, dy);
     }
-
 }
 
 void SecondScene::onTouchEnded(cocos2d::Touch* touch, cocos2d::Event* event)
