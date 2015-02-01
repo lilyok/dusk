@@ -7,7 +7,7 @@
 //
 #include "SecondScene.h"
 #include "MenuScene.h"
-#include "CCActionCatmullRom.h"
+//#include "CCActionCatmullRom.h"
 
 USING_NS_CC;
 #define HERO_SPRITE_TAG 5
@@ -51,6 +51,11 @@ bool SecondScene::init()
         return false;
     }
     
+    std::vector<std::string> searchPaths;
+    searchPaths.push_back("TileMaps");
+    searchPaths.push_back("fonts");
+    FileUtils::getInstance()->setSearchPaths(searchPaths);
+ 
     this->visibleSize = Director::getInstance()->getVisibleSize();
     this->origin = Director::getInstance()->getVisibleOrigin();
     

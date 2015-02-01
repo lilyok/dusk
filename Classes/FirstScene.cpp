@@ -10,8 +10,8 @@ USING_NS_CC;
 #define NEWLEVEL_TAG 40
 #define BRICK 1
 #define BALL 2
-#define COLLISION_V 100.0
-#define BACKGROUND_V 60.0
+#define COLLISION_V 150.0
+#define BACKGROUND_V 90.0
 
 Scene* FirstScene::createScene()
 {
@@ -37,7 +37,11 @@ bool FirstScene::init()
     {
         return false;
     }
-    
+    std::vector<std::string> searchPaths;
+    searchPaths.push_back("TileMaps");
+    searchPaths.push_back("fonts");
+    FileUtils::getInstance()->setSearchPaths(searchPaths);
+
     Size visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
@@ -154,7 +158,7 @@ bool FirstScene::init()
   
 
     // create the animation out of the frames
-    Animation* animationLeft = Animation::createWithSpriteFrames(animLeftFrames, 0.1f);
+    Animation* animationLeft = Animation::createWithSpriteFrames(animLeftFrames, 0.2f);
     animateLeft = Animate::create(animationLeft);
     animateLeft->retain();
     
@@ -169,7 +173,7 @@ bool FirstScene::init()
     animRightFrames.pushBack(spritecache->getSpriteFrameByName("ThumbelinaRight01.png"));
     
     // create the animation out of the frames
-    Animation* animationRight = Animation::createWithSpriteFrames(animRightFrames, 0.1f);
+    Animation* animationRight = Animation::createWithSpriteFrames(animRightFrames, 0.2f);
     animateRight = Animate::create(animationRight);
     animateRight->retain();
     
@@ -186,7 +190,7 @@ bool FirstScene::init()
     animSplashFrames.pushBack(spritecache->getSpriteFrameByName("splash03a.png"));
     
     // create the animation out of the frames
-    Animation* animationSplash = Animation::createWithSpriteFrames(animSplashFrames, 0.1f);
+    Animation* animationSplash = Animation::createWithSpriteFrames(animSplashFrames, 0.2f);
     animateSplash = Animate::create(animationSplash);
     animateSplash->retain();
     
@@ -210,6 +214,8 @@ bool FirstScene::init()
 
     
     //auto map = TMXTiledMap::create("test.tmx");
+
+    
     auto map = TMXTiledMap::create("holeTile.tmx");
     Size s = map->getContentSize();
     scale_map =visibleSize.width / s.width;
@@ -409,23 +415,24 @@ void FirstScene::onExit()
 
 void FirstScene::update(float delta)
 {
-    if (mysprite->getNumberOfRunningActions() <= 0){
+   // if (mysprite->getNumberOfRunningActions() <= 0){
         if (isRestart || isNewLevel)
         {
-            this->pausedNodes = cocos2d::Director::getInstance()->getActionManager()->pauseAllRunningActions();
+            if (mysprite->getNumberOfRunningActions() <= 0)
+                this->pausedNodes = cocos2d::Director::getInstance()->getActionManager()->pauseAllRunningActions();
             if (isRestart)
             {
                 restartItem->setVisible(true);
+                
                 mysprite->getPhysicsBody()->setGravityEnable(true);
             }
             else
                 newlevelItem->setVisible(true);
             
         }
-        else
+        else if (mysprite->getNumberOfRunningActions() <= 0)
             mysprite->runAction(RepeatForever::create(animate));
-    }
-    
+ //   }
 }
 
 bool FirstScene::onContactBegin(cocos2d::PhysicsContact& contact)
@@ -437,10 +444,6 @@ bool FirstScene::onContactBegin(cocos2d::PhysicsContact& contact)
         {
             if (nodeA->getTag() == NEWLEVEL_TAG || nodeB->getTag() == NEWLEVEL_TAG)
             {
-                if (mysprite->getNumberOfRunningActions() > 0){
-                    mysprite->stopAllActions();
-                    mysprite->getPhysicsBody()->setGravityEnable(false);
-                }
                 isNewLevel = true;
             }
             else if (nodeB->getTag() != LIMITER_TAG && nodeA->getTag() != LIMITER_TAG)
