@@ -392,9 +392,10 @@ Vector<Sprite*> SecondScene::makeObject(int tag, TMXObjectGroup *objects, float 
             auto name = objPoint.at("name").asString();
             Point _point = Point(xZero+scale_map*(x + w / 2.0f), yZero+scale_map*(y+h/2.0f));
             Size _size = Size(scale_map*w, scale_map*h);
-            if (name == "dummy") tag = 0;
-            else if (name == "newlevel") tag = NEWLEVEL_TAG;
-            auto sprite = this->makePhysicsObjAt(tag, _point, _size, form, v, n, mask);
+            auto tagname = tag;
+            if (name == "dummy") tagname = 0;
+            else if (name == "newlevel") tagname = NEWLEVEL_TAG;
+            auto sprite = this->makePhysicsObjAt(tagname, _point, _size, form, v, n, mask);
             
             if (name == "") name = std::to_string(i);
             i++;
