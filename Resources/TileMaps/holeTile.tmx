@@ -5780,7 +5780,7 @@
    <tile gid="4032"/>
   </data>
  </layer>
- <objectgroup name="collisions" visible="0">
+ <objectgroup name="collisions">
   <object id="299" x="36.3757" y="449.735" width="343.915" height="42.9894"/>
   <object id="300" x="36.3757" y="502.646" width="277.778" height="69.4444"/>
   <object id="301" x="429.894" y="982.143" width="304.233" height="69.4444"/>
@@ -5813,16 +5813,13 @@
   <object id="398" x="737.758" y="11.7739" width="31.3972" height="3818.68"/>
  </objectgroup>
  <objectgroup name="fallings">
-  <object id="394" x="169.328" y="1688.87" width="55.1217" height="55.1217">
+  <object id="394" x="486.3" y="2151.25" width="55.1217" height="55.1217">
    <ellipse/>
   </object>
-  <object id="395" x="249.739" y="1144.02" width="75.4138" height="83.9319">
+  <object id="399" x="180.534" y="1080.4" width="62.7943" height="62.7943">
    <ellipse/>
   </object>
-  <object id="399" x="412.088" y="1059.65" width="62.7943" height="62.7943">
-   <ellipse/>
-  </object>
-  <object id="400" x="270.801" y="3045.53" width="58.8697" height="47.0958">
+  <object id="400" x="267.801" y="2886.53" width="58.8697" height="47.0958">
    <ellipse/>
   </object>
  </objectgroup>
