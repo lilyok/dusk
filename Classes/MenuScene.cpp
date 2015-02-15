@@ -9,6 +9,7 @@
 #include "MenuScene.h"
 #include "FirstScene.h"
 #include "SecondScene.h"
+#include "ThirdScene.h"
 
 USING_NS_CC;
 
@@ -77,7 +78,7 @@ bool MenuScene::init()
 
 void MenuScene::menuStartCallback(cocos2d::Ref* pSender)
 {
-    Scene *pScene = SecondScene::createScene();//FirstScene::createScene();
+    Scene *pScene = ThirdScene::createScene();//FirstScene::createScene();
     CCDirector::getInstance()->replaceScene(pScene);
 }
 

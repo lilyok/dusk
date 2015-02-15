@@ -7,6 +7,7 @@
 //
 #include "SecondScene.h"
 #include "MenuScene.h"
+#include "ThirdScene.h"
 //#include "CCActionCatmullRom.h"
 
 USING_NS_CC;
@@ -1003,7 +1004,7 @@ void SecondScene::menuRestartCallback(Ref *pSender)
 
 void SecondScene::menuNewLeveltCallback(Ref *pSender)
 {
-    auto newScene = MenuScene::createScene();
+    auto newScene = ThirdScene::createScene();
     cocos2d::Director::getInstance()->replaceScene(newScene);
     newlevelItem->setVisible(false);
 }
