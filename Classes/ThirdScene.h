@@ -65,14 +65,14 @@ private:
     cocos2d::PhysicsWorld* m_world;
     cocos2d::Vector<Node*> pausedNodes;
     
-
-    cocos2d::DrawNode* draw_red_node;
-    cocos2d::DrawNode* draw_orange_node;
-    cocos2d::DrawNode* draw_yellow_node;
-    cocos2d::DrawNode* draw_green_node;
-    cocos2d::DrawNode* draw_aqua_node;
-    cocos2d::DrawNode* draw_blue_node;
-    cocos2d::DrawNode* draw_magenta_node;
+//
+//    cocos2d::DrawNode* draw_red_node;
+//    cocos2d::DrawNode* draw_orange_node;
+//    cocos2d::DrawNode* draw_yellow_node;
+//    cocos2d::DrawNode* draw_green_node;
+//    cocos2d::DrawNode* draw_aqua_node;
+//    cocos2d::DrawNode* draw_blue_node;
+//    cocos2d::DrawNode* draw_magenta_node;
 
     cocos2d::Vector<cocos2d::Sprite*> rainbows;
     
