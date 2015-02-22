@@ -105,21 +105,21 @@ bool ThirdScene::init()
 
     // add the label as a child to this layer
     this->addChild(label, 1);
-    draw_red_node = DrawNode::create();
-    draw_orange_node = DrawNode::create();
-    draw_yellow_node = DrawNode::create();
-    draw_green_node = DrawNode::create();
-    draw_aqua_node = DrawNode::create();
-    draw_blue_node = DrawNode::create();
-    draw_magenta_node = DrawNode::create();
-    
-    addChild(draw_red_node, 1, COLLISION_TAG);
-    addChild(draw_orange_node, 2, COLLISION_TAG);
-    addChild(draw_yellow_node, 3, COLLISION_TAG);
-    addChild(draw_green_node, 4, COLLISION_TAG);
-    addChild(draw_aqua_node, 5, COLLISION_TAG);
-    addChild(draw_blue_node, 6, COLLISION_TAG);
-    addChild(draw_magenta_node, 7, COLLISION_TAG);
+//    draw_red_node = DrawNode::create();
+//    draw_orange_node = DrawNode::create();
+//    draw_yellow_node = DrawNode::create();
+//    draw_green_node = DrawNode::create();
+//    draw_aqua_node = DrawNode::create();
+//    draw_blue_node = DrawNode::create();
+//    draw_magenta_node = DrawNode::create();
+//    
+//    addChild(draw_red_node, 1, COLLISION_TAG);
+//    addChild(draw_orange_node, 2, COLLISION_TAG);
+//    addChild(draw_yellow_node, 3, COLLISION_TAG);
+//    addChild(draw_green_node, 4, COLLISION_TAG);
+//    addChild(draw_aqua_node, 5, COLLISION_TAG);
+//    addChild(draw_blue_node, 6, COLLISION_TAG);
+//    addChild(draw_magenta_node, 7, COLLISION_TAG);
     
     //////////////////////////////////////////////////
 
