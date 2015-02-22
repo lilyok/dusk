@@ -2,6 +2,18 @@
 #define __ThirdScene_SCENE_H__
 
 #include "cocos2d.h"
+#define HERO_SPRITE_TAG 5
+#define RAINHORN_SPRITE_TAG 30
+
+#define COLLISION_TAG 10
+#define FALLING_TAG 20
+#define NEWLEVEL_TAG 40
+#define BRICK 1
+#define BALL 2
+#define COLLISION_V 150.0
+#define BACKGROUND_V 90.0
+#define RAINBOW_LENGTH 10.0
+#define RAINBOW_POINT_COUNT 100
 
 class ThirdScene : public cocos2d::Layer
 {
@@ -22,11 +34,11 @@ public:
 
 protected:
     cocos2d::Sprite* mysprite;
-//    cocos2d::Sprite* rainhorn;
+    cocos2d::Sprite* bottom_sprite;
     
     cocos2d::Animate* animateFalling;
-   // cocos2d::Animate* animateWaiting;
     cocos2d::Animate* animateGo;
+    
     float myScale = 1.0;
 
 private:
@@ -43,6 +55,8 @@ private:
     bool onContactBegin(cocos2d::PhysicsContact& contact);
     bool isRestart = false;
     bool isNewLevel = false;
+    bool isGo = false;
+    bool isStopCollision = false;
     float scale_map;
     //cocos2d::TMXTiledMap* map;
     cocos2d::MenuItemImage* restartItem;
@@ -60,10 +74,10 @@ private:
     cocos2d::DrawNode* draw_blue_node;
     cocos2d::DrawNode* draw_magenta_node;
 
-    
+    cocos2d::Vector<cocos2d::Sprite*> rainbows;
     
     void drawRainbow(cocos2d::Vec2 last_pos, cocos2d::Vec2 pos);
-
+    void spriteMove(cocos2d::Sprite* sprite, float coeff = -0.4, float x = COLLISION_V, float y = 0);
     
     
 //    std::vector<std::vector<cocos2d::Vec2>> rainbows;

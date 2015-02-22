@@ -3,24 +3,13 @@
 #include "SecondScene.h"
 
 USING_NS_CC;
-#define HERO_SPRITE_TAG 5
-#define RAINHORN_SPRITE_TAG 30
 
-#define COLLISION_TAG 10
-#define FALLING_TAG 20
-#define NEWLEVEL_TAG 40
-#define BRICK 1
-#define BALL 2
-#define COLLISION_V 150.0
-#define BACKGROUND_V 90.0
-#define RAINBOW_LENGTH 10.0
-#define RAINBOW_POINT_COUNT 100
 
 Scene* ThirdScene::createScene()
 {
     // 'scene' is an autorelease object
     auto scene = Scene::createWithPhysics();
-    //scene->getPhysicsWorld()->setDebugDrawMask(PhysicsWorld::DEBUGDRAW_ALL);
+   // scene->getPhysicsWorld()->setDebugDrawMask(PhysicsWorld::DEBUGDRAW_ALL);
     // 'layer' is an autorelease object
     auto layer = ThirdScene::create();
     layer->setPhyWorld(scene->getPhysicsWorld());
@@ -135,11 +124,11 @@ bool ThirdScene::init()
     //////////////////////////////////////////////////
 
     
-    auto bottom_sprite = Sprite::create("white_pixel.png");
+    bottom_sprite = Sprite::create("green.png");
     
     bottom_sprite->getTexture()->setTexParameters({.minFilter =  GL_LINEAR, .magFilter =  GL_LINEAR, .wrapS =  GL_REPEAT, .wrapT =  GL_REPEAT});
     bottom_sprite->setTextureRect(Rect(0, 0, visibleSize.width, visibleSize.height/50));
-    bottom_sprite->setOpacity(0);
+  //  bottom_sprite->setOpacity(0);
     PhysicsBody* body;
     
     
@@ -148,6 +137,8 @@ bool ThirdScene::init()
     bottom_sprite->setPhysicsBody(body);
     //bottom_sprite->setTag(tag);
     body->setDynamic(false);
+//    body->setGravityEnable(false);
+//    body->setMass(100);
     bottom_sprite->setPosition(Vec2(origin.x + visibleSize.width/2, origin.y + bottom_sprite->getTextureRect().size.height/2));
     addChild(bottom_sprite, 1);
     
@@ -183,7 +174,6 @@ bool ThirdScene::init()
     physicsBody->setContactTestBitmask(0xFFFFFFFF);
     //set the body isn't affected by the physics world's gravitational force
     physicsBody->setGravityEnable(true);
-
     // run it and repeat it forever
     mysprite->runAction(RepeatForever::create(animateFalling));
 
@@ -287,7 +277,50 @@ void ThirdScene::onExit()
 
 void ThirdScene::update(float delta)
 {
+    if (isGo) {
+        
+        if (rainbows.size() > RAINBOW_POINT_COUNT){
+            auto rsize = rainbows.size();
+            for (auto i = 0; i < rsize - RAINBOW_POINT_COUNT; i++)
+                rainbows.erase(0);
+        }
+        
+        if(bottom_sprite->getPositionX() + bottom_sprite->getContentSize().width/2 < 0){
+            float y = rand() % int(Director::getInstance()->getVisibleSize().height - bottom_sprite->getContentSize().height * 1.5) + bottom_sprite->getTextureRect().size.height/2;
+            
+            bottom_sprite->setPosition(Director::getInstance()->getVisibleSize().width + bottom_sprite->getContentSize().width/2, y);
+            
+            
+        }
+        
+        if (!isStopCollision && mysprite->getPositionX() < mysprite->getContentSize().width/4*myScale) {
+            bottom_sprite->stopActionByTag(COLLISION_V);
+            for (auto rainbow : rainbows) {
+                rainbow->stopActionByTag(COLLISION_V);
+            }
+            mysprite->getPhysicsBody()->setVelocity(Vec2(COLLISION_V,COLLISION_V));
+           // spriteMove(mysprite, 0.5, COLLISION_V, COLLISION_V*2);
+            isStopCollision = true;
+            
+        } else if (isStopCollision && mysprite->getPositionX() > mysprite->getContentSize().width/2*myScale) {
+           // mysprite->stopActionByTag(COLLISION_V);
+            mysprite->getPhysicsBody()->setVelocity(Vec2(0,0));
+            spriteMove(bottom_sprite);
+            
+            for (auto rainbow : rainbows) {
+                spriteMove(rainbow);
+            }
+            isStopCollision = false;
+        }
+        
+    }
 
+}
+
+void ThirdScene::spriteMove(Sprite* sprite, float coeff, float x, float y){
+    auto bottomMove = RepeatForever::create(MoveBy::create(1, Vec2(coeff* x * myScale, coeff * y * myScale)));
+    bottomMove->setTag(COLLISION_V);
+    sprite->runAction(bottomMove);
 }
 
 bool ThirdScene::onContactBegin(cocos2d::PhysicsContact& contact)
@@ -319,11 +352,13 @@ bool ThirdScene::onContactBegin(cocos2d::PhysicsContact& contact)
                 
                 mysprite->setPosition(pos);
                 mysprite->runAction(RepeatForever::create(animateGo));
-                auto body = PhysicsBody::createBox(Size(nwidth*myScale, mysprite->getContentSize().height*myScale), PhysicsMaterial(0.1f, 1.0f, 0.0f));
+                auto body = PhysicsBody::createBox(Size(nwidth*myScale, mysprite->getContentSize().height*myScale), PhysicsMaterial(0.1f, 0.0f, 0.0f));
+                body->setAngularDamping(1.0);
+                mysprite->setAnchorPoint(Vec2(nwidth*myScale/2,0));// nwidth*myScale/2));
                 mysprite->setPhysicsBody(body);
 
-                
-                
+                spriteMove(bottom_sprite);
+                isGo = true;
             }
         }
     }
@@ -345,7 +380,13 @@ bool ThirdScene::onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event)
 void ThirdScene::drawRainbow(Vec2 last_pos, Vec2 pos){
     auto body_top = PhysicsBody::createEdgeSegment(Vec2(0, 0), Vec2(pos.x - last_pos.x, pos.y - last_pos.y), PhysicsMaterial(0.1f, 1.0f, 0.0f), 15);
     body_top->setDynamic(false);
-    auto sprite_top = Sprite::create();
+  //  auto sprite_top = Sprite::create();
+    
+    auto sprite_top = Sprite::create("rainbow.png");
+    
+    sprite_top->getTexture()->setTexParameters({.minFilter =  GL_LINEAR, .magFilter =  GL_LINEAR, .wrapS =  GL_REPEAT, .wrapT =  GL_REPEAT});
+    sprite_top->setTextureRect(Rect(0, 0, 128, 128));
+    sprite_top->setScale(myScale/2);
     sprite_top->setPhysicsBody(body_top);
     
     addChild(sprite_top, 3, COLLISION_TAG);
@@ -368,23 +409,24 @@ void ThirdScene::drawRainbow(Vec2 last_pos, Vec2 pos){
     
     sprite_top->setPosition(Vec2(last_pos.x - 0*dx - 15*dy, last_pos.y - 0*dy - 15*dx));
  
-    draw_red_node->drawSegment(Vec2(last_pos.x, last_pos.y), Vec2(pos.x, pos.y), 10, Color4F(1, 0, 0, 0.9));
-    draw_orange_node->drawSegment(Vec2(last_pos.x - 5*dy, last_pos.y - 5*dx), Vec2(pos.x - 5*dy, pos.y - 5*dx), 10, Color4F(1, 0.5, 0, 0.9));
-    draw_yellow_node->drawSegment(Vec2(last_pos.x - 10*dy , last_pos.y - 10*dx),
-                                  Vec2(pos.x - 10*dy, pos.y - 10*dx), 10, Color4F(0.7, 1, 0, 0.9));
-    draw_green_node->drawSegment(Vec2(last_pos.x - 15*dy, last_pos.y - 15*dx), Vec2(pos.x - 15*dy, pos.y - 15*dx), 10, Color4F(0, 1, 0, 0.9));
-    draw_aqua_node->drawSegment(Vec2(last_pos.x - 20*dy, last_pos.y - 20*dx),
-                                Vec2(pos.x - 20*dy, pos.y - 20*dx), 10, Color4F(0, 0.9, 1, 0.9));
-    draw_blue_node->drawSegment(Vec2(last_pos.x - 25*dy, last_pos.y - 25*dx),
-                                Vec2(pos.x - 25*dy, pos.y - 25*dx), 10, Color4F(0, 0.7, 1, 0.9));
-    draw_magenta_node->drawSegment(Vec2(last_pos.x - 30*dy, last_pos.y - 30*dx),
-                                   Vec2(pos.x - 30*dy, pos.y - 30*dx),10, Color4F(0.5, 0, 1, 0.9));
-    
+//    draw_red_node->drawSegment(Vec2(last_pos.x, last_pos.y), Vec2(pos.x, pos.y), 10, Color4F(1, 0, 0, 0.9));
+//    draw_orange_node->drawSegment(Vec2(last_pos.x - 5*dy, last_pos.y - 5*dx), Vec2(pos.x - 5*dy, pos.y - 5*dx), 10, Color4F(1, 0.5, 0, 0.9));
+//    draw_yellow_node->drawSegment(Vec2(last_pos.x - 10*dy , last_pos.y - 10*dx),
+//                                  Vec2(pos.x - 10*dy, pos.y - 10*dx), 10, Color4F(0.7, 1, 0, 0.9));
+//    draw_green_node->drawSegment(Vec2(last_pos.x - 15*dy, last_pos.y - 15*dx), Vec2(pos.x - 15*dy, pos.y - 15*dx), 10, Color4F(0, 1, 0, 0.9));
+//    draw_aqua_node->drawSegment(Vec2(last_pos.x - 20*dy, last_pos.y - 20*dx),
+//                                Vec2(pos.x - 20*dy, pos.y - 20*dx), 10, Color4F(0, 0.9, 1, 0.9));
+//    draw_blue_node->drawSegment(Vec2(last_pos.x - 25*dy, last_pos.y - 25*dx),
+//                                Vec2(pos.x - 25*dy, pos.y - 25*dx), 10, Color4F(0, 0.7, 1, 0.9));
+//    draw_magenta_node->drawSegment(Vec2(last_pos.x - 30*dy, last_pos.y - 30*dx),
+//                                   Vec2(pos.x - 30*dy, pos.y - 30*dx),10, Color4F(0.5, 0, 1, 0.9));
+    if (!isStopCollision) spriteMove(sprite_top);
+    rainbows.pushBack(sprite_top);
 }
 
 void ThirdScene::onTouchMoved(cocos2d::Touch* touch, cocos2d::Event* event)
 {
-    if (!isRestart && !isNewLevel) {
+    if (isGo && !isRestart && !isNewLevel) {
         drawRainbow(Vec2(touch->getPreviousLocation().x, touch->getPreviousLocation().y),
                     Vec2(touch->getLocation().x, touch->getLocation().y));
      }
